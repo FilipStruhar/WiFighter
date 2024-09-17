@@ -1,7 +1,23 @@
 # WiFighter
-Easy-to-use WiFI pen-testing tool build on aircrack-ng library written in python and bash
+Easy-to-use WiFI pen-testing tool for Debian build on aircrack-ng written in python and bash
+
+
+
+
+## Dependecies
+
+```c
+apt install -y aircrack-ng hcxdumptool hcxpcapngtool hashcat
+```
+
+
+
 
 ## 1. Aircrack guide
+
+- WPA, WEP Cracking
+- WiFi Scanning
+- AP Deauth (DoS)
 
 ### Monitor mode
 
@@ -22,7 +38,53 @@ Scan all
 airodump-ng <INTERFACE>mon
 ```
 
-Scan by ESSID
+Scan 2.4GHz WiFi's
 ```c
-airodump-ng --essid <ESSID> <INTERFACE>
+airodump-ng --band gb <ESSID> <INTERFACE>mon
 ```
+
+Scan 5GHz WiFi's
+```c
+airodump-ng --band a <ESSID> <INTERFACE>mon
+```
+
+Listen for handshake of specified AP
+```c
+airodump-ng -c <CHANNEL> -b <BSSID> -w OUTPUT_PATH <INTERFACE>mon
+```
+
+### Deauth clients (force handshake)
+
+Deauth all (broadcast)
+```c
+aireplay-ng -0 1 -a <BSSID> <INTERFACE>mon
+```
+
+Deauth client
+```c
+aireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
+```
+
+
+
+## 2. Hcxtools guide
+
+- PMKID Capture
+- Converting raw .pcapng captures to hashcat readable formats
+
+### Installation
+
+```c
+git clone https://github.com/ZerBea/hcxtools.git
+cd hcxtools
+```
+
+
+
+## 3. Reaver or Bully ??
+
+- Cracking WPS
+
+
+
+
