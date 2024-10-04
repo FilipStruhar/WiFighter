@@ -1,9 +1,6 @@
 # WiFighter
 Easy-to-use WiFI pen-testing tool for Debian build on aircrack-ng written in python and bash
 
-
-
-
 ## Dependecies
 
 ```c
@@ -12,6 +9,21 @@ apt install -y aircrack-ng hcxdumptool hcxpcapngtool hashcat
 
 
 
+# WiFi Scan & Select
+```python
+  import pywifi, scapy
+```
+
+
+
+# Threat Hunt
+```python
+  import pywifi, scapy
+```
+
+
+
+# Attack mode
 
 ## 1. Aircrack guide
 
