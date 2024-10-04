@@ -25,13 +25,14 @@ apt install -y aircrack-ng hcxdumptool hcxpcapngtool hashcat
 
 ## Attack mode
 
-### 1. Aircrack guide
+### 1. WPA/WPA2 Handshake Crack
 
+**Aircrack guide**
 - WPA, WEP Cracking
 - WiFi Scanning
 - AP Deauth (DoS)
 
-### Monitor mode
+**Monitor mode**
 
 Set interface to monitor
 ```c
@@ -43,7 +44,7 @@ Set interface to managed
 airmon-ng stop <INTERFACE>mon
 ```
 
-### Scan nearby WiFi's
+**Scan nearby WiFi's**
 
 Scan all
 ```c
@@ -65,7 +66,7 @@ Listen for handshake of specified AP
 airodump-ng -c <CHANNEL> -b <BSSID> -w OUTPUT_PATH <INTERFACE>mon
 ```
 
-### Deauth clients (force handshake)
+**Deauth clients (force handshake)**
 
 Deauth all (broadcast)
 ```c
@@ -79,12 +80,14 @@ aireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
 
 
 
-### 2. Hcxtools guide - TESTOVAT U TATY, TP-Link OneMesh feature
+### 2. PMKID Attack (802.11r exploit)
+
+**Hcxtools guide - TESTOVAT U TATY, TP-Link OneMesh feature**
 
 - PMKID Capture
 - Converting raw .pcapng captures to hashcat readable formats
 
-### Installation
+**Installation**
 
 ```c
 git clone https://github.com/ZerBea/hcxtools.git
@@ -93,9 +96,15 @@ cd hcxtools
 
 
 
-### 3. Reaver or Bully ??
+### 3. WPS
 
-- Cracking WPS
+**Reaver or Bully ??**
+- Online WPS PIN Brute Force
+
+### 4. Pixie Dust
+- Offline WPS PIN crack
+- Není to brute force (rychlejší)
+- Využívá slabé kryptografie PINu (né každý router je náchyloý)
 
 
 
