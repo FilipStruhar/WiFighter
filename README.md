@@ -101,7 +101,7 @@ cd hcxtools
 **Reaver or Bully ??**
 - Online WPS PIN Brute Force
 
-### 4. Pixie Dust
+**Pixie Dust**
 - Offline WPS PIN crack
 - Není to brute force (rychlejší)
 - Využívá slabé kryptografie PINu (né každý router je náchyloý)
