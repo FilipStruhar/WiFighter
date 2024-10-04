@@ -25,7 +25,7 @@ apt install -y aircrack-ng hcxdumptool hcxpcapngtool hashcat
 
 ## Attack mode
 
-## 1. Aircrack guide
+### 1. Aircrack guide
 
 - WPA, WEP Cracking
 - WiFi Scanning
@@ -79,7 +79,7 @@ aireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
 
 
 
-## 2. Hcxtools guide - TESTOVAT U TATY, TP-Link OneMesh feature
+### 2. Hcxtools guide - TESTOVAT U TATY, TP-Link OneMesh feature
 
 - PMKID Capture
 - Converting raw .pcapng captures to hashcat readable formats
@@ -93,7 +93,7 @@ cd hcxtools
 
 
 
-## 3. Reaver or Bully ??
+### 3. Reaver or Bully ??
 
 - Cracking WPS
 
