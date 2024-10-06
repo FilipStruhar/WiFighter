@@ -1,10 +1,45 @@
 # WiFighter
 Easy-to-use WiFI pen-testing tool for Debian build on aircrack-ng written in python and bash
 
-## Dependecies
 
+
+## Installation 
+
+**Dependencies**
 ```c
-apt install -y aircrack-ng hcxdumptool hcxpcapngtool hashcat
+sudo apt install python3 python3-venv python3-pip hashcat ...
+```
+
+**Creating python virtual enviroment**
+
+Clone the project
+```c
+git clone https://github.com/FilipStruhar/WiFighter.git
+```
+
+Enter the project folder
+```c
+cd WiFighter
+```
+
+Create virtual enviroment
+```c
+python3 -m venv venv
+```
+
+Enter the virtual enviroment
+```c
+source venv/bin/activate
+```
+
+Install scapy and pywifi
+```c
+source venv/bin/activate
+```
+
+Install python modules (scapy, pywifi) 
+```c
+pip install -r requirements.txt
 ```
 
 
