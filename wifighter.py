@@ -90,13 +90,50 @@ for interface in wifi.interfaces():
         'Interface': interface
     })
 
-# Let the user choose an interface
+# Let the user choose scanning interface
 try: 
      interface, interface_name = choose_interface(detected_interfaces)
 except:
-     print(f"\n\n{ORANGE}Exiting the scan...{RESET}")
+     print(f"\n\n{ORANGE}Exiting the tool...{RESET}")
 
 if interface and interface_name:
-    print(f"The selected interface is: {interface}")
-    print(f"The selected interface is: {interface_name}")
+     #print(f"The selected interface is: {interface}")
+     #print(f"The selected interface is: {interface_name}")
 
+     # Scan APs
+     try:
+          while True:
+
+               interface.scan()  # Start scanning
+               
+               # Get scan results
+               scan_results = interface.scan_results()
+               ap_list = []
+
+               for network in scan_results:
+                    ap_list.append({
+                         'SSID': network.ssid,
+                         'BSSID': network.bssid,
+                         'Signal': network.signal,
+                         'Band': network.freq,
+                         'Auth': network.auth,
+                         'Cipher': network.cipher,
+                         'AKM': network.akm
+                    })
+               
+               # Clear the screen
+               os.system("clear")
+
+               # Print the AP list
+               print("Available Wi-Fi networks:")
+               for ap in ap_list:
+                    print(f"SSID: {ap['SSID']}, BSSID: {ap['BSSID']}, Signal: {ap['Signal']} dBm, Band: {ap['Band']} MHz, Auth: {ap['Auth']}, Cipher: {ap['Cipher']}, AKM: {ap['AKM']}")
+
+
+               #Wait before the next scan
+               print("\nPress [Ctrl + C] to stop")
+               # Refresh rate
+               time.sleep(4)
+     
+     except KeyboardInterrupt:
+          print(f"\n\n{ORANGE}Exiting the scan...{RESET}")
