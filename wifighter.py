@@ -1,5 +1,7 @@
 #!venv/bin/python
 
+# | IMPORT | #
+
 import os, sys, subprocess, time, scapy, pywifi
 
 # | GRAPHICS | #
@@ -23,11 +25,6 @@ LOGO = r"""
   \__/\  / |__|\___  /   |__\___  /|___|  /__|  \___  >__|   
        \/          \/      /_____/      \/          \/                                                                           
 """
-
-
-# | IMPORT | #
-
-import subprocess, os, time
 
 
  #------------------------------------------------------------------------------------
