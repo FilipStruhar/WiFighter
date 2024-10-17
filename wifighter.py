@@ -60,10 +60,29 @@ def introduction():
 
  # | MONITOR MODE | #
 
-def interface_mode(iface):
+def start_service(service):
+     status = os.popen(f'systemctl is-active {service}').read().strip()
+
+     if status == 'inactive':
+          print(f"{ORANGE}Starting {service}...{RESET}")
+          os.system(f'sudo systemctl start {service}')
+     else:
+          print(f"{ORANGE}{service} is already running.")
+
+def stop_service(service):
+     status = os.popen(f'systemctl is-active {service}').read().strip()
+
+     if status == 'active':
+          print(f"{ORANGE}Stopping {service}...{RESET}")
+          os.system(f'sudo systemctl stop {service}')
+     else:
+          print(f"{ORANGE}{service} is not running.{RESET}")
+
+
+def interface_mode(interface):
      mode = None
 
-     output = os.popen(f'iwconfig {iface} 2>/dev/null').read()
+     output = os.popen(f'iwconfig {interface} 2>/dev/null').read()
      for line in output.splitlines():
           if 'Mode' in line:
                if 'Managed' in line:
@@ -75,24 +94,43 @@ def interface_mode(iface):
      return mode
 
 
-def monitor_switch(command, iface):
+def monitor_switch(command, interface):
 
-     # Determine interface mode
-     mode = interface_mode(iface)
+     interfering_services = ['NetworkManager', 'wpa_supplicant']
+     mode = interface_mode(interface)
 
      if mode:
+
+          # Start Monitor mode
           if command == "start" and mode == "Managed":
-               print("Switch")
+               # Kill interfering services
+               for service in interfering_services:
+                    stop_service(service)
+
+               # Switch interface to Monitor
+               os.system(f'sudo ifconfig {interface} down')
+               print(f"{ORANGE}\nSetting {interface} to monitor mode...{RESET}")
+               os.system(f'sudo iwconfig {interface} mode monitor')
+               os.system(f'sudo ifconfig {interface} up')
           elif command == "start":
-               print(f'{ORANGE}Interface {iface} is already in Monitor Mode, skipping...{RESET}')
+               print(f'{ORANGE}Interface {interface} is already in Monitor Mode, skipping...\n{RESET}')
           
+          # Stop Monitor mode
           if command == "stop" and mode == "Monitor":
-               print("Switch")
+               # Kill interfering services
+               for service in interfering_services:
+                    start_service(service)
+
+               # Switch interface to Managed
+               os.system(f'sudo ifconfig {interface} down')
+               print(f"{ORANGE}\nSetting {interface} to managed mode...{RESET}")
+               os.system(f'sudo iwconfig {interface} mode managed')
+               os.system(f'sudo ifconfig {interface} up')
           elif command == "stop":
-               print(f'{ORANGE}Interface {iface} is already in Managed Mode, skipping...{RESET}')
+               print(f'{ORANGE}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')
                
      else:
-          print(f'{RED}Non-Existant Interface Name! Retype "wifigter [start/stop] [-INTERFACE_NAME-]"{RESET}')
+          print(f'{RED}Interface "{interface}" does not exist! Retype "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
 
 #---------------------------------
 
@@ -146,15 +184,22 @@ except:
 if command:
      # Check if command has all needed arguments
      if len(sys.argv) == 3:
-          iface = sys.argv[2]
+          interface = sys.argv[2]
 
           if command == "start" or command == "stop":
                # Call monitor switch function
-               monitor_switch(command, iface)
+               monitor_switch(command, interface)
+          elif command == "status":
+               # Show interface mode status
+               mode = interface_mode(interface)
+               if mode:
+                    print(f'{ORANGE}Interface {interface} is {mode}\n{RESET}')
+               else:
+                    print(f'{RED}Interface "{interface}" does not exist! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
           else:
-               print(f'{RED}Invalid Command! Type "wifigter [start/stop] [-INTERFACE_NAME-]"{RESET}')
+               print(f'{RED}Invalid Command! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
      else:
-          print(f'{RED}Invalid Command! Type "wifigter [start/stop] [-INTERFACE_NAME-]"{RESET}')
+          print(f'{RED}Invalid Command! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
 else:
 
      # Show logo
