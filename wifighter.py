@@ -65,16 +65,16 @@ def start_service(service):
 
      if status == 'inactive':
           print(f"{ORANGE}Starting {service}...{RESET}")
-          os.system(f'sudo systemctl start {service}')
+          os.system(f'systemctl start {service}')
      else:
-          print(f"{ORANGE}{service} is already running.")
+          print(f"{ORANGE}{service} is already running.{RESET}")
 
 def stop_service(service):
      status = os.popen(f'systemctl is-active {service}').read().strip()
 
      if status == 'active':
           print(f"{ORANGE}Stopping {service}...{RESET}")
-          os.system(f'sudo systemctl stop {service}')
+          os.system(f'systemctl stop {service}')
      else:
           print(f"{ORANGE}{service} is not running.{RESET}")
 
@@ -108,24 +108,25 @@ def monitor_switch(command, interface):
                     stop_service(service)
 
                # Switch interface to Monitor
-               os.system(f'sudo ifconfig {interface} down')
+               os.system(f'ifconfig {interface} down')
                print(f"{ORANGE}\nSetting {interface} to monitor mode...{RESET}")
-               os.system(f'sudo iwconfig {interface} mode monitor')
-               os.system(f'sudo ifconfig {interface} up')
+               os.system(f'iwconfig {interface} mode monitor')
+               os.system(f'ifconfig {interface} up')
+
           elif command == "start":
                print(f'{ORANGE}Interface {interface} is already in Monitor Mode, skipping...\n{RESET}')
           
           # Stop Monitor mode
           if command == "stop" and mode == "Monitor":
+               # Switch interface to Managed
+               os.system(f'ifconfig {interface} down')
+               print(f"{ORANGE}\nSetting {interface} to managed mode...{RESET}")
+               os.system(f'iwconfig {interface} mode managed')
+               os.system(f'ifconfig {interface} up')
+
                # Kill interfering services
                for service in interfering_services:
                     start_service(service)
-
-               # Switch interface to Managed
-               os.system(f'sudo ifconfig {interface} down')
-               print(f"{ORANGE}\nSetting {interface} to managed mode...{RESET}")
-               os.system(f'sudo iwconfig {interface} mode managed')
-               os.system(f'sudo ifconfig {interface} up')
           elif command == "stop":
                print(f'{ORANGE}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')
                
