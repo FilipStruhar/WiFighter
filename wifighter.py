@@ -82,7 +82,7 @@ def stop_service(service):
 def interface_mode(interface):
      mode = None
 
-     output = os.popen(f'iwconfig {interface} 2>/dev/null').read()
+     output = os.popen(f'sudo iwconfig {interface} 2>/dev/null').read()
      for line in output.splitlines():
           if 'Mode' in line:
                if 'Managed' in line:
@@ -248,7 +248,7 @@ else:
                     print("\nPress [Ctrl + C] to stop")
 
                     # Refresh rate
-                    time.sleep(4)
+                    time.sleep(1)
           
           except KeyboardInterrupt:
                print(f"\n\n{ORANGE}Exiting the scan...{RESET}")
