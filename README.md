@@ -37,6 +37,10 @@ Install python modules (scapy, pywifi)
 pip install -r requirements.txt
 ```
 
+Exit from virtual enviroment
+```c
+deactivate
+```
 
 
 ## WiFi Scan & Select
