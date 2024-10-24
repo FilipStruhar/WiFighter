@@ -32,11 +32,6 @@ Enter the virtual enviroment
 source venv/bin/activate
 ```
 
-Install scapy and pywifi
-```c
-source venv/bin/activate
-```
-
 Install python modules (scapy, pywifi) 
 ```c
 pip install -r requirements.txt
