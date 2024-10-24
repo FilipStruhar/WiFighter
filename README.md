@@ -1,5 +1,5 @@
 # WiFighter
-Easy-to-use WiFI pen-testing tool for Debian build on aircrack-ng written in python and bash
+Easy-to-use WiFI pen-testing/scanning tool written in python
 
 
 
