@@ -7,7 +7,7 @@ Easy-to-use WiFI pen-testing/scanning tool written in python
 
 **Dependencies**
 ```c
-sudo apt install python3 python3-venv python3-pip hashcat ...
+sudo apt install python3 hashcat ...
 ```
 
 **Creating python virtual enviroment**
