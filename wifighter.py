@@ -3,6 +3,7 @@
 # | IMPORT | #
 
 import os, sys, subprocess, time, scapy, pywifi
+from prettytable import PrettyTable
 
 # | GRAPHICS | #
 
@@ -96,7 +97,7 @@ def interface_mode(interface):
 
 def monitor_switch(command, interface):
 
-     interfering_services = ['NetworkManager', 'wpa_supplicant']
+     interfering_services = ['NetworkManager']
      mode = interface_mode(interface)
 
      if mode:
@@ -124,7 +125,7 @@ def monitor_switch(command, interface):
                os.system(f'iwconfig {interface} mode managed')
                os.system(f'ifconfig {interface} up')
 
-               # Kill interfering services
+               # Start needed services
                for service in interfering_services:
                     start_service(service)
           elif command == "stop":
@@ -238,17 +239,27 @@ else:
                     # Clear the screen
                     os.system("clear")
 
-                    # Print the AP list
-                    print("Available Wi-Fi networks:")
-                    for ap in ap_list:
-                         print(f"SSID: {ap['SSID']}, BSSID: {ap['BSSID']}, Signal: {ap['Signal']} dBm, Band: {ap['Band']} MHz, Auth: {ap['Auth']}, Cipher: {ap['Cipher']}, AKM: {ap['AKM']}")
+                    # Create a PrettyTable instance
+                    table = PrettyTable()
 
+                    # Define the column names
+                    table.field_names = ["SSID", "BSSID", "Signal (dBm)", "Band (MHz)", "Auth", "Cipher", "AKM"]
+
+                    # Populate the table with AP data
+                    for ap in ap_list:
+                         table.add_row([ap['SSID'], ap['BSSID'], ap['Signal'], ap['Band'], ap['Auth'], ap['Cipher'], ap['AKM']])
+                         # Add an empty row for spacing
+                         table.add_row(["", "", "", "", "", "", ""])  # Empty row
+
+                    # Print the AP table
+                    print("Available Wi-Fi networks:")
+                    print(table)
 
                     # Wait before the next scan
                     print("\nPress [Ctrl + C] to stop")
 
                     # Refresh rate
-                    time.sleep(1)
+                    time.sleep(4)
           
           except KeyboardInterrupt:
                print(f"\n\n{ORANGE}Exiting the scan...{RESET}")

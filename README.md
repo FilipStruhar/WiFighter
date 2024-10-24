@@ -32,7 +32,7 @@ Enter the virtual enviroment
 source venv/bin/activate
 ```
 
-Install python modules (scapy, pywifi) 
+Install python modules (scapy, pywifi, prettytable) 
 ```c
 pip install -r requirements.txt
 ```
