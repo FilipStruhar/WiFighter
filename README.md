@@ -42,6 +42,11 @@ Exit from virtual enviroment
 deactivate
 ```
 
+Run the tool
+```c
+sudo ./wifighter.py
+```
+
 
 ## WiFi Scan & Select
 ```python
