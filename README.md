@@ -1,7 +1,8 @@
 # WiFighter
 Easy-to-use WiFI pen-testing/scanning tool written in python
 
-
+# Notes
+-iwlist for scanning
 
 ## Installation 
 
@@ -49,16 +50,12 @@ sudo ./wifighter.py
 
 
 ## WiFi Scan & Select
-```python
-  import pywifi, scapy
-```
+
 
 
 
 ## Threat Hunt
-```python
-  import pywifi, scapy
-```
+
 
 
 
