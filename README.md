@@ -1,7 +1,7 @@
 # WiFighter
 Easy-to-use WiFI pen-testing/scanning tool written in python
 
-# Notes
+## Notes
 - iwlist for scanning
 
 
