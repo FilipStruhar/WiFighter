@@ -2,13 +2,14 @@
 Easy-to-use WiFI pen-testing/scanning tool written in python
 
 # Notes
--iwlist for scanning
+- iwlist for scanning
+
 
 ## Installation 
 
 **Dependencies**
 ```c
-sudo apt install python3 hashcat ...
+sudo apt install python3 ...
 ```
 
 **Creating python virtual enviroment**
@@ -140,7 +141,7 @@ cd hcxtools
 **Pixie Dust**
 - Offline WPS PIN crack
 - Není to brute force (rychlejší)
-- Využívá slabé kryptografie PINu (né každý router je náchyloý)
+- Využívá slabé kryptografie PINu (né každý router je náchylný)
 
 
 
