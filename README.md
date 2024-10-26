@@ -2,7 +2,7 @@
 Easy-to-use WiFI pen-testing/scanning tool written in python
 
 ## Notes
-- iwlist for scanning
+- iwlist from wireless-tools package for AP scanning 
 
 
 ## Installation 
