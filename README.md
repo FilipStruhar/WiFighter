@@ -34,7 +34,7 @@ Enter the virtual enviroment
 source venv/bin/activate
 ```
 
-Install python modules (scapy, pywifi, prettytable) 
+Install python modules (prettytable, tqdm) 
 ```c
 pip install -r requirements.txt
 ```
