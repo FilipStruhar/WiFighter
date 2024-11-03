@@ -2,7 +2,7 @@
 
 # | IMPORT | #
 
-import os, sys, subprocess, time, scapy
+import os, sys, subprocess, time, scapy, pywifi
 from prettytable import PrettyTable
 
 # | GRAPHICS | #
@@ -32,7 +32,10 @@ LOGO = r"""
 
 # | VARIABLES | #
 
-
+detected_interfaces = []
+interface = None
+interface_name = None
+wifi = pywifi.PyWiFi()
 
  #------------------------------------------------------------------------------------
 
@@ -88,14 +91,17 @@ def interface_mode(interface):
                elif 'Monitor' in line:
                     mode = 'Monitor'
                break
+
      return mode
 
 
 def monitor_switch(command, interface):
-     interfering_services = ['NetworkManager', 'wpa_supplicant']
+
+     interfering_services = ['NetworkManager']
      mode = interface_mode(interface)
 
      if mode:
+
           # Start Monitor mode
           if command == "start" and mode == "Managed":
                # Kill interfering services
@@ -123,7 +129,8 @@ def monitor_switch(command, interface):
                for service in interfering_services:
                     start_service(service)
           elif command == "stop":
-               print(f'{ORANGE}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')              
+               print(f'{ORANGE}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')
+               
      else:
           print(f'{RED}Interface "{interface}" does not exist! Retype "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
 
@@ -131,41 +138,39 @@ def monitor_switch(command, interface):
 
  # | INTERFACE CHOOSE | #
 
-def choose_interface():
-     interfaces_path = '/sys/class/net/'
-     detected_interfaces = []
-
-    # Iterate over all the interfaces in the directory
-     for interface in os.listdir(interfaces_path):
-          # Make sure that the interface is a wireless interface
-          if os.path.exists(os.path.join(interfaces_path, interface, 'wireless')):
-               detected_interfaces.append(interface)
+def choose_interface(detected_interfaces):
+     # Build array of detected wifi interfaces
+     for interface in wifi.interfaces():
+          detected_interfaces.append({
+               'Name':interface.name(),
+               'Interface': interface
+          })
 
      idx = 1
      # Show detected interfaces
      print("Available Wi-Fi Interfaces:")
      for interface in detected_interfaces:
-          print(f"{CYAN}{idx}. {interface}{RESET}")
+          print(f"{idx}. {interface['Name']}")
           idx += 1
 
-     try:
-          while True:     
-               try:
-                    # Prompt the user to choose an interface by number
-                    choice = int(input("\nSelect the interface number: ")) - 1
-               except ValueError:
-                    print("Invalid input! Please enter a valid number.\n")
-                    continue
-               
-               # Check if the choice is in range
-               if 0 <= choice < len(detected_interfaces):
-                    # Return chosen interface
-                    interface = detected_interfaces[choice]
-                    return interface
-               else:
-                    print("Invalid choice! Please select a valid number from the list.\n")
-     except:
-          print(f"\n\n{ORANGE}Exiting the tool...{RESET}")
+     while True:     
+          
+          try:
+               # Prompt the user to choose an interface by number
+               choice = int(input("\nSelect the interface number: ")) - 1
+          except ValueError:
+               print("Invalid input! Please enter a valid number.\n")
+               continue
+          
+          # Check if the choice is in range
+          if 0 <= choice < len(detected_interfaces):
+               # Return chosen interface
+               interface = detected_interfaces[choice]['Interface']
+               interface_name = detected_interfaces[choice]['Name']
+               return interface, interface_name
+          else:
+               print("Invalid choice! Please select a valid number from the list.\n")
+          
 
 
  #------------------------------------------------------------------------------------
@@ -202,8 +207,59 @@ else:
      # Show logo
      introduction()
 
-     # Let the user choose scanning/attacking interface
-     interface = choose_interface()
-     print(interface)
+     # Let the user choose scanning interface
+     try: 
+          interface, interface_name = choose_interface(detected_interfaces)
+     except:
+          print(f"\n\n{ORANGE}Exiting the tool...{RESET}")
 
-     
+     if interface and interface_name:
+          # Scan APs
+          try:
+               while True:
+                    
+                    interface.scan()  # Start scanning
+                    
+                    # Get scan results
+                    scan_results = interface.scan_results()
+                   
+                    ap_list = []
+
+                    for network in scan_results:
+                         ap_list.append({
+                              'SSID': network.ssid,
+                              'BSSID': network.bssid,
+                              'Signal': network.signal,
+                              'Band': network.freq,
+                              'Auth': network.auth,
+                              'Cipher': network.cipher,
+                              'AKM': network.akm
+                         })
+                    
+                    # Clear the screen
+                    os.system("clear")
+
+                    # Create a PrettyTable instance
+                    table = PrettyTable()
+
+                    # Define the column names
+                    table.field_names = ["SSID", "BSSID", "Signal (dBm)", "Band (MHz)", "Auth", "Cipher", "AKM"]
+
+                    # Populate the table with AP data
+                    for ap in ap_list:
+                         table.add_row([ap['SSID'], ap['BSSID'], ap['Signal'], ap['Band'], ap['Auth'], ap['Cipher'], ap['AKM']])
+                         # Add an empty row for spacing
+                         table.add_row(["", "", "", "", "", "", ""])  # Empty row
+
+                    # Print the AP table
+                    print("Available Wi-Fi networks:")
+                    print(table)
+
+                    # Wait before the next scan
+                    print("\nPress [Ctrl + C] to stop")
+
+                    # Refresh rate
+                    time.sleep(4)
+          
+          except KeyboardInterrupt:
+               print(f"\n\n{ORANGE}Exiting the scan...{RESET}")
