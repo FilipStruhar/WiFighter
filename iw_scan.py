@@ -29,7 +29,7 @@ def scan_wifi(interface):
     channel_pattern = r'Channel:\s*(\d+)'
     frequency_pattern = r'Frequency:\s*([0-9.]+)\s*GHz'
     encryption_pattern = r'IE:\s*(.*?)(?=\n|$)'
-    auth_pattern = r'Authentication Suites \(1\)\s*:\s*([^ \n]+)'
+    auth_pattern = r'Authentication Suites \(\d+\)\s*:\s*([^\n]+)'
 
     skip_first = True
 

@@ -1,8 +1,8 @@
 # WiFighter
 Easy-to-use WiFI pen-testing/scanning tool written in python
 
-## Notes
-- iwlist from wireless-tools package for AP scanning 
+## Filip's Notes 
+- AP scanning in progress
 
 
 ## Installation 
