@@ -20,6 +20,8 @@ def scan_wifi(interface):
 
     # Divide the output into seperate AP sections
     ap_array = scan.split('Cell')
+    # Skip first element which isn't AP
+    ap_array = ap_array[1:]
 
     # Define AP data searching pattern
     essid_pattern = r'ESSID:"([^"]+)"'
@@ -31,14 +33,9 @@ def scan_wifi(interface):
     encryption_pattern = r'IE:\s*(.*?)(?=\n|$)'
     auth_pattern = r'Authentication Suites \(\d+\)\s*:\s*([^\n]+)'
 
-    skip_first = True
 
     for ap in ap_array:
-        # Skip first element which isn't AP
-        if skip_first:
-            skip_first = False
-            continue
-        
+
         # Find matching data
         bssid_match = re.search(bssid_pattern, ap)
         essid_match = re.search(essid_pattern, ap)
@@ -47,7 +44,7 @@ def scan_wifi(interface):
         channel_match = re.search(channel_pattern, ap)
         frequency_match = re.search(frequency_pattern, ap)
         encryption_match = re.findall(encryption_pattern, ap) # Filter "Uknown" entries from array
-        encryption_match = [entry.strip() for entry in encryption_match if "Unknown" not in entry]
+        #encryption_match = [entry.strip() for entry in encryption_match if "Unknown" not in entry]
         auth_match = re.findall(auth_pattern, ap)
         
         # Set AP information
@@ -70,7 +67,12 @@ def scan_wifi(interface):
         else:
             frequency = None
 
+         
+
         if encryption_match:
+            print('Encryption matched! -', encryption_match)
+
+            """
             wpa3_entry, wpa2_entry, wpa_entry, wep_entry = None, None, None, None
             # Find newest AP's used encryption method
             for entry in encryption_match:
@@ -105,14 +107,34 @@ def scan_wifi(interface):
                     encryption = "WPA"
                 elif "WEP" in encryption:
                     encryption = "WEP"
+            """
+
 
             # Get auth based on the index
+            """
             if auth_match:
                 auth = auth_match[index]
             else:
                 auth = None
+            """
+
+        
+        print()
+        print()
+        print('------------------------------')
+        print(ap)
+        print('######################')
+        print(essid)
+        print(bssid)
+        print(channel)
+        print(signal)
+        print(frequency)
+        #print(encryption_match, encryption)
+        #print(auth_match, auth)
+        
 
         # Add AP to available APs array
+        """
         ap_list.append({
             'SSID': essid,
             'BSSID': bssid,
@@ -123,6 +145,7 @@ def scan_wifi(interface):
             'Auth': auth,
             'Quality': quality
         })
+        """
 
     # Sort array by signal (strongest signal first)
     for ap in ap_list:
@@ -132,13 +155,14 @@ def scan_wifi(interface):
 
     ap_list.sort(key=lambda x: x['Signal'], reverse=True)
 
-    return ap_list
+    #return ap_list
 
 
 #--------------------------------------#
 
 interface = 'wlp1s0'
 
+"""
 try:
     while True:
         ap_list = scan_wifi(interface)
@@ -162,5 +186,6 @@ try:
 
 except KeyboardInterrupt:
     print(f"\n\nExiting the scan...")
+"""
 
-
+scan_wifi(interface)

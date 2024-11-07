@@ -68,12 +68,14 @@ def scan_wifi(interface):
 
             encryption = None
             if auth and cipher:
-                if auth == 'PSK SAE' and cipher == 'CCMP':
+                if auth == 'PSK SAE':
                     encryption = 'WPA3'
-                elif auth =='PSK' and cipher == 'CCMP':
+                elif auth =='PSK' or auth =='IEEE 802.1X' and cipher == 'CCMP':
                     encryption = 'WPA2'
-                elif auth == 'PSK' and cipher == 'CCMP TKIP':
-                    encryption = 'WPA/WPA2'
+                elif auth =='PSK' or auth =='IEEE 802.1X' and cipher == 'TKIP':
+                    encryption = 'WPA'
+                else:
+                    encryption = 'WEP'
 
 
             if ssid:
@@ -85,7 +87,6 @@ def scan_wifi(interface):
                 print(ssid)
                 print(bssid)
                 print(channel)
-                #print(signal)
                 print(band)
                 print(frequency)
                 print(encryption)
