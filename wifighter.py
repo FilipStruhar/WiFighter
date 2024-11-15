@@ -54,8 +54,8 @@ def introduction():
      print(f"{ORANGE}Easy-to-use WiFi pen-testing security tool{RESET}")
      #print(" ")
      #print(f"{MAGENTA}Build by Filip Struhar | https://github.com/FilipStruhar{RESET}")
-     print()
-     print(f'{ORANGE}____________________________________________{RESET}')
+     #print()
+     #print(f'{ORANGE}____________________________________________{RESET}')
 
      print()
      print()
@@ -160,7 +160,7 @@ def choose_interface():
                     # Prompt the user to choose an interface by number
                     choice = int(input(f"\n{CYAN}Select the interface number:{RESET} ")) - 1
                except ValueError:
-                    print("Invalid input! Please enter a valid number.\n")
+                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
                
                # Check if the choice is in range
@@ -169,7 +169,7 @@ def choose_interface():
                     interface = detected_interfaces[choice]
                     return interface
                else:
-                    print("Invalid choice! Please select a valid number from the list.\n")
+                    print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except:
           print(f"\n\n{ORANGE}Exiting the tool...{RESET}")
 
@@ -177,17 +177,24 @@ def choose_interface():
 def choose_target():
      global ap_list
 
-     while True:     
-          # Prompt the user to choose an interface by number
-          choice = int(input(f"\n{CYAN}Select the Target AP number:{RESET} "))
-          # Check if the choice is in range
-          if 0 <= choice < len(ap_list):
-               # Return chosen interface
-               target_ap = ap_list[choice]
-               return target_ap
-          else:
-               print("Invalid choice! Please select a valid number from the list.\n")
-
+     try:
+          while True:     
+               # Prompt the user to choose an interface by number
+               try:
+                    # Prompt the user to choose an interface by number
+                    choice = int(input(f"\n{CYAN}Select the interface number:{RESET} "))
+               except ValueError:
+                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+                    continue
+               # Check if the choice is in range
+               if 0 <= choice < len(ap_list):
+                    # Return chosen interface
+                    target_ap = ap_list[choice]
+                    return target_ap
+               else:
+                    print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+     except:
+          print(f"\n\n{ORANGE}Exiting the tool...{RESET}")
 
 
  #------------------------------------------------------------------------------------
@@ -205,8 +212,8 @@ def wifi_list(interface):
                scan = os.popen(f'iw dev {interface} scan').read()
           time.sleep(0.1)
 
-     # Divide the output into separate AP sections
-     ap_array = scan.split('BSS')
+     # Divide the output into separate AP sections (split by specific BSS occurrence)
+     ap_array = re.split(r"(?=BSS [0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})", scan)
 
      # Define patterns for extracting AP data
      ssid_pattern = r'SSID:\s*(.+)'
@@ -218,54 +225,54 @@ def wifi_list(interface):
      cipher_pattern = r'\* Pairwise ciphers: (.+?)\n'
 
      for ap in ap_array:
-          if 'signal' in ap:
-               ssid_match = re.search(ssid_pattern, ap)
-               bssid_match = re.search(bssid_pattern, ap)
-               signal_match = re.search(signal_pattern, ap)
-               channel_match = re.search(channel_pattern, ap)
-               frequency_match = re.search(frequency_pattern, ap)
-               auth_match = re.search(auth_pattern, ap)
-               cipher_match = re.search(cipher_pattern, ap)
-               
-               # Extract AP properties or set to None if not found
-               ssid = ssid_match.group(1) if ssid_match else None
-               bssid = bssid_match.group(1) if bssid_match else None
-               signal = f'{round(float(signal_match.group(1)))}' if signal_match else None
-               channel = channel_match.group(1) if channel_match else None
-               frequency = round(float(frequency_match.group(1))) if frequency_match else None
-               auth = auth_match.group(1) if auth_match else None
-               cipher = cipher_match.group(1).strip() if cipher_match else None
-               # Map frequency to band (e.g., 2.4 GHz or 5 GHz)
-               band = None
-               if frequency:
-                    if frequency < 3000:
-                         band = "2.4 GHz"
-                    elif frequency >= 5000:
-                         band = "5 GHz"
-               # Determine security type
-               encryption = None
-               if auth and cipher:
-                    if auth == 'PSK SAE':
-                         encryption = 'WPA3'
-                    elif auth == 'PSK' or auth == 'IEEE 802.1X' and cipher == 'CCMP':
-                         encryption = 'WPA2'
-                    elif auth == 'PSK' or auth == 'IEEE 802.1X' and cipher == 'TKIP':
-                         encryption = 'WPA'
-                    else:
-                         encryption = 'WEP'  
-               # Append parsed AP information
-               #  to the list
-               if int(signal) > -100:
-                    ap_list.append({
-                         'SSID': ssid,
-                         'BSSID': bssid,
-                         'Channel': channel,
-                         'Signal': signal,
-                         'Band': band,
-                         'Encryption': encryption,
-                         'Auth': auth,
-                         'Cipher': cipher
-                    })
+
+          ssid_match = re.search(ssid_pattern, ap)
+          bssid_match = re.search(bssid_pattern, ap)
+          signal_match = re.search(signal_pattern, ap)
+          channel_match = re.search(channel_pattern, ap)
+          frequency_match = re.search(frequency_pattern, ap)
+          auth_match = re.search(auth_pattern, ap)
+          cipher_match = re.search(cipher_pattern, ap)
+          
+          # Extract AP properties or set to None if not found
+          ssid = ssid_match.group(1) if ssid_match else None
+          bssid = bssid_match.group(1) if bssid_match else None
+          signal = f'{round(float(signal_match.group(1)))}' if signal_match else None
+          channel = channel_match.group(1) if channel_match else None
+          frequency = round(float(frequency_match.group(1))) if frequency_match else None
+          auth = auth_match.group(1) if auth_match else None
+          cipher = cipher_match.group(1).strip() if cipher_match else None
+          # Map frequency to band (e.g., 2.4 GHz or 5 GHz)
+          band = None
+          if frequency:
+               if frequency < 3000:
+                    band = "2.4 GHz"
+               elif frequency >= 5000:
+                    band = "5 GHz"
+          # Determine security type
+          encryption = None
+          if auth and cipher:
+               if auth == 'PSK SAE':
+                    encryption = 'WPA3'
+               elif auth == 'PSK' or auth == 'IEEE 802.1X' and cipher == 'CCMP':
+                    encryption = 'WPA2'
+               elif auth == 'PSK' or auth == 'IEEE 802.1X' and cipher == 'TKIP':
+                    encryption = 'WPA'
+               else:
+                    encryption = 'WEP'  
+          # Append parsed AP information
+          #  to the list
+          #if int(signal) > -100:
+          ap_list.append({
+               'SSID': ssid,
+               'BSSID': bssid,
+               'Channel': channel,
+               'Signal': signal,
+               'Band': band,
+               'Encryption': encryption,
+               'Auth': auth,
+               'Cipher': cipher
+          })
                     
      # Sort by signal strength (strongest first)
      ap_list = sorted(ap_list, key=lambda x: x['Signal'], reverse=False)
@@ -340,8 +347,10 @@ else:
                     time.sleep(1)
 
           except KeyboardInterrupt:
-               target_ap = choose_target()
-               print(target_ap)
-
+               if ap_list:
+                    target_ap = choose_target()
+                    print(target_ap)
+               else:
+                    print(f"{RED}No AP's found, exiting...{RESET}\n")
 
      
