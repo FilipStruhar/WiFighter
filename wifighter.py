@@ -214,6 +214,8 @@ def wifi_list(interface):
 
      # Divide the output into separate AP sections (split by specific BSS occurrence)
      ap_array = re.split(r"(?=BSS [0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})", scan)
+     # Skip first - not AP
+     ap_array = ap_array[1:]
 
      # Define patterns for extracting AP data
      ssid_pattern = r'SSID:\s*(.+)'
