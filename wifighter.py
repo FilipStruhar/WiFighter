@@ -6,19 +6,18 @@ import os, sys, subprocess, time, re
 from prettytable import PrettyTable
 from tqdm import tqdm
 
+
 # | GRAPHICS | #
 
-# Colors
-RED = '\033[31m'
-ORANGE = '\033[38;5;214m'
-GREEN = '\033[32m'
-YELLOW = '\033[33m'
+ORANGE = '\033[38;5;214m' # Main color
+YELLOW = '\033[33m' # System action
+RED = '\033[31m' # Error
+GREEN = '\033[32m' # Correct
 BLUE = '\033[34m'
 MAGENTA = '\033[35m'
 CYAN = '\033[36m'
-RESET = '\033[0m'
+RESET = '\033[0m' # Reset color
 
-# Logo
 LOGO = r"""
  __      __._____________.__       .__     __                
 /  \    /  \__\_   _____/|__| ____ |  |___/  |_  ___________ 
@@ -31,27 +30,26 @@ LOGO = r"""
 
  #------------------------------------------------------------------------------------
 
-# | VARIABLES | #
+# | GLOBAL VARIABLES | #
 
 ap_list = []
 interface = None
 target_ap = None
-
 
  #------------------------------------------------------------------------------------
 
  # | INTRODUCTION | #
 
 def introduction():
-     os.system("clear")
 
      # | INTRODUCTION | #
 
+     os.system('clear')
      # Show logo
-     print(f"{ORANGE}{LOGO}{RESET}")
+     print(f"{BLUE}{LOGO}{RESET}")
      print()
-     print(f"{ORANGE}Welcome :D This is WiFighter!{RESET}")
-     print(f"{ORANGE}Easy-to-use WiFi pen-testing security tool{RESET}")
+     print(f"{BLUE}Welcome :D This is WiFighter!{RESET}")
+     print(f"{BLUE}Easy-to-use WiFi pen-testing security tool{RESET}")
      #print(" ")
      #print(f"{MAGENTA}Build by Filip Struhar | https://github.com/FilipStruhar{RESET}")
      #print()
@@ -68,19 +66,19 @@ def start_service(service):
      status = os.popen(f'systemctl is-active {service}').read().strip()
 
      if status == 'inactive':
-          print(f"{ORANGE}Starting {service}...{RESET}")
+          print(f"{CYAN}Starting {service}...{RESET}")
           os.system(f'systemctl start {service}')
      else:
-          print(f"{ORANGE}{service} is already running.{RESET}")
+          print(f"{CYAN}{service} is already running.{RESET}")
 
 def stop_service(service):
      status = os.popen(f'systemctl is-active {service}').read().strip()
 
      if status == 'active':
-          print(f"{ORANGE}Stopping {service}...{RESET}")
+          print(f"{CYAN}Stopping {service}...{RESET}")
           os.system(f'systemctl stop {service}')
      else:
-          print(f"{ORANGE}{service} is not running.{RESET}")
+          print(f"{CYAN}{service} is not running.{RESET}")
 
 
 def interface_mode(interface):
@@ -99,6 +97,7 @@ def interface_mode(interface):
 
 def monitor_switch(command, interface):
      interfering_services = ['NetworkManager', 'wpa_supplicant']
+     #interfering_services = []
      mode = interface_mode(interface)
 
      if mode:
@@ -110,18 +109,18 @@ def monitor_switch(command, interface):
 
                # Switch interface to Monitor
                os.system(f'ifconfig {interface} down')
-               print(f"{ORANGE}\nSetting {interface} to monitor mode...{RESET}")
+               print(f"{CYAN}\nSetting {interface} to monitor mode...{RESET}")
                os.system(f'iwconfig {interface} mode monitor')
                os.system(f'ifconfig {interface} up')
 
           elif command == "start":
-               print(f'{ORANGE}Interface {interface} is already in Monitor Mode, skipping...\n{RESET}')
+               print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...\n{RESET}')
           
           # Stop Monitor mode
           if command == "stop" and mode == "Monitor":
                # Switch interface to Managed
                os.system(f'ifconfig {interface} down')
-               print(f"{ORANGE}\nSetting {interface} to managed mode...{RESET}")
+               print(f"{CYAN}\nSetting {interface} to managed mode...{RESET}")
                os.system(f'iwconfig {interface} mode managed')
                os.system(f'ifconfig {interface} up')
 
@@ -129,7 +128,7 @@ def monitor_switch(command, interface):
                for service in interfering_services:
                     start_service(service)
           elif command == "stop":
-               print(f'{ORANGE}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')              
+               print(f'{CYAN}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')              
      else:
           print(f'{RED}Interface "{interface}" does not exist! Retype "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
 
@@ -149,16 +148,15 @@ def choose_interface():
 
      idx = 1
      # Show detected interfaces
-     print("Available Wi-Fi Interfaces:")
+     print("Select Wi-Fi Interface:")
      for interface in detected_interfaces:
-          print(f"{CYAN}{idx}. {interface}{RESET}")
+          print(f"{idx}. {interface}")
           idx += 1
-
      try:
           while True:     
                try:
                     # Prompt the user to choose an interface by number
-                    choice = int(input(f"\n{CYAN}Select the interface number:{RESET} ")) - 1
+                    choice = int(input(f"\nInterface number: ")) - 1
                except ValueError:
                     print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
@@ -170,8 +168,8 @@ def choose_interface():
                     return interface
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
-     except:
-          print(f"\n\n{ORANGE}Exiting the tool...{RESET}")
+     except KeyboardInterrupt:
+          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
 
      
 def choose_target():
@@ -179,34 +177,32 @@ def choose_target():
 
      try:
           while True:     
-               # Prompt the user to choose an interface by number
                try:
                     # Prompt the user to choose an interface by number
-                    choice = int(input(f"\n{CYAN}Select the interface number:{RESET} "))
+                    choice = int(input(f"\nSelect the interface number: "))
                except ValueError:
                     print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
                # Check if the choice is in range
                if 0 <= choice < len(ap_list):
-                    # Return chosen interface
                     target_ap = ap_list[choice]
-                    return target_ap
+                    return target_ap # Return chosen interface
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
-     except:
-          print(f"\n\n{ORANGE}Exiting the tool...{RESET}")
+     except KeyboardInterrupt:
+          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
 
 
  #------------------------------------------------------------------------------------
 
-# | Wifi Scan | #
+# | AP Scan | #
 
-def wifi_list(interface):
-     scan = None
+def scan_ap(interface):
      ap_list = []
 
      # Retrieve Wi-Fi scan output from iw
      estimated_scan_time = 1
+     scan = None
      for _ in tqdm(range(estimated_scan_time * 10), desc=f"Scanning for APs on {interface}", ncols=100):
           if scan is None:
                scan = os.popen(f'iw dev {interface} scan').read()
@@ -214,6 +210,7 @@ def wifi_list(interface):
 
      # Divide the output into separate AP sections (split by specific BSS occurrence)
      ap_array = re.split(r"(?=BSS [0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})", scan)
+     
      # Skip first - not AP
      ap_array = ap_array[1:]
 
@@ -244,6 +241,7 @@ def wifi_list(interface):
           frequency = round(float(frequency_match.group(1))) if frequency_match else None
           auth = auth_match.group(1) if auth_match else None
           cipher = cipher_match.group(1).strip() if cipher_match else None
+          
           # Map frequency to band (e.g., 2.4 GHz or 5 GHz)
           band = None
           if frequency:
@@ -251,6 +249,7 @@ def wifi_list(interface):
                     band = "2.4 GHz"
                elif frequency >= 5000:
                     band = "5 GHz"
+
           # Determine security type
           encryption = None
           if auth and cipher:
@@ -262,9 +261,8 @@ def wifi_list(interface):
                     encryption = 'WPA'
                else:
                     encryption = 'WEP'  
-          # Append parsed AP information
-          #  to the list
-          #if int(signal) > -100:
+
+          # Append parsed AP information to array
           ap_list.append({
                'SSID': ssid,
                'BSSID': bssid,
@@ -276,34 +274,49 @@ def wifi_list(interface):
                'Cipher': cipher
           })
                     
-     # Sort by signal strength (strongest first)
+     # Sort array by signal strength (strongest first)
      ap_list = sorted(ap_list, key=lambda x: x['Signal'], reverse=False)
 
      return ap_list
+
+def list_ap(ap_list):
+     # Create AP table
+     table = PrettyTable()
+     table.field_names = ["ID", "SSID", "BSSID", "Channel", "Signal (dBm)", "Band", "Encryption", "Auth", "Cipher"]
+     for idx, ap in enumerate(ap_list):
+          table.add_row([
+               f"{idx}",
+               ap['SSID'] or "N/A",
+               ap['BSSID'] or "N/A",
+               ap['Channel'] or "N/A",
+               f"{ap['Signal']} dBm" if ap['Signal'] else "N/A",
+               ap['Band'] or "N/A",
+               ap['Encryption'] or "Open/Unknown",
+               ap['Auth'] or "N/A",
+               ap['Cipher'] or "N/A"
+          ])
+
+     print("Available Wi-Fi networks:")
+     print(f"{MAGENTA}{table}{RESET}")
+     print("\nPress [Ctrl + C] to stop")
 
  #------------------------------------------------------------------------------------
 
 # | CODE | #
 
-# Try catching monitor switch command
-try:
-     command = sys.argv[1]
-except:
-     command = None
+cmd_lenght = len(sys.argv)
 
-if command:
-     # Check if command has all needed arguments
-     if len(sys.argv) == 3:
+if cmd_lenght > 1:
+     if cmd_lenght == 3:
+          command = sys.argv[1].lower()
           interface = sys.argv[2]
 
-          if command == "start" or command == "stop":
-               # Call monitor switch function
+          if command == "start" or command == "stop": # Interface mode switch function
                monitor_switch(command, interface)
-          elif command == "status":
-               # Show interface mode status
+          elif command == "status": # Show interface mode status
                mode = interface_mode(interface)
                if mode:
-                    print(f'{ORANGE}Interface {interface} is {mode}\n{RESET}')
+                    print(f'{CYAN}Interface {interface} is {mode}\n{RESET}')
                else:
                     print(f'{RED}Interface "{interface}" does not exist! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
           else:
@@ -311,48 +324,25 @@ if command:
      else:
           print(f'{RED}Invalid Command! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
 else:
-
-     # Show logo
      introduction()
-
-     # Let the user choose scanning/attacking interface
+     # Choose scanning/attacking interface
      interface = choose_interface()
 
+     # Scan and choose target AP
      if interface:
           try:
                while True:
-                    ap_list = wifi_list(interface)
-                    os.system("clear")
-
+                    ap_list = scan_ap(interface) # Get available AP's
                     introduction()
-
-                    # Create AP table
-                    table = PrettyTable()
-                    table.field_names = ["ID", "SSID", "BSSID", "Channel", "Signal (dBm)", "Band", "Encryption", "Auth", "Cipher"]
-                    for idx, ap in enumerate(ap_list):
-                         table.add_row([
-                              f"{CYAN}{idx}{RESET}",
-                              ap['SSID'] or "N/A",
-                              ap['BSSID'] or "N/A",
-                              ap['Channel'] or "N/A",
-                              f"{ap['Signal']} dBm" if ap['Signal'] else "N/A",
-                              ap['Band'] or "N/A",
-                              ap['Encryption'] or "Open/Unknown",
-                              ap['Auth'] or "N/A",
-                              ap['Cipher'] or "N/A"
-                         ])
-
-                    print("Available Wi-Fi networks:")
-                    print(table)
-                    print("\nPress [Ctrl + C] to stop")
-
-                    time.sleep(1)
-
+                    list_ap(ap_list) # Show available AP's in table
           except KeyboardInterrupt:
                if ap_list:
-                    target_ap = choose_target()
-                    print(target_ap)
+                    target_ap = choose_target() # Let user choose AP as target
                else:
                     print(f"{RED}No AP's found, exiting...{RESET}\n")
+
+     # List attack possibilities
+     if target_ap:
+          print(target_ap)
 
      
