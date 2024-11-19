@@ -3,8 +3,8 @@
 # | IMPORT | #
 
 import os, sys, subprocess, time, re
-from prettytable import PrettyTable
-from tqdm import tqdm
+from prettytable import PrettyTable 
+from tqdm import tqdm 
 
 
 # | GRAPHICS | #
@@ -52,8 +52,6 @@ def introduction():
      print(f"{BLUE}Easy-to-use WiFi pen-testing security tool{RESET}")
      #print(" ")
      #print(f"{MAGENTA}Build by Filip Struhar | https://github.com/FilipStruhar{RESET}")
-     #print()
-     #print(f'{ORANGE}____________________________________________{RESET}')
 
      print()
      print()
@@ -97,7 +95,7 @@ def interface_mode(interface):
 
 def monitor_switch(command, interface):
      interfering_services = ['NetworkManager', 'wpa_supplicant']
-     #interfering_services = []
+     
      mode = interface_mode(interface)
 
      if mode:
@@ -130,7 +128,18 @@ def monitor_switch(command, interface):
           elif command == "stop":
                print(f'{CYAN}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')              
      else:
-          print(f'{RED}Interface "{interface}" does not exist! Retype "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
+          print(f'{RED}Interface "{interface}" does not exist! Retype "wifighter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
+
+
+def list_interfaces():
+     interfaces_path = '/sys/class/net/'
+     print(f"{CYAN}Detected Wi-Fi Interfaces:{RESET}")
+     print()
+    # Iterate over all the interfaces in the directory
+     for interface in os.listdir(interfaces_path):
+          # Make sure that the interface is a wireless interface
+          if os.path.exists(os.path.join(interfaces_path, interface, 'wireless')):
+               print(f"{CYAN}{interface}{RESET}")
 
 #---------------------------------
 
@@ -307,7 +316,14 @@ def list_ap(ap_list):
 cmd_lenght = len(sys.argv)
 
 if cmd_lenght > 1:
-     if cmd_lenght == 3:
+     if cmd_lenght == 2:
+          command = sys.argv[1].lower()
+          if command == "list":
+               list_interfaces()
+               print()
+          else:
+               print(f'{RED}Invalid Command! Type "wifighter [start/stop/status/list] [-INTERFACE_NAME-]"\n{RESET}')
+     elif cmd_lenght == 3:
           command = sys.argv[1].lower()
           interface = sys.argv[2]
 
@@ -318,11 +334,11 @@ if cmd_lenght > 1:
                if mode:
                     print(f'{CYAN}Interface {interface} is {mode}\n{RESET}')
                else:
-                    print(f'{RED}Interface "{interface}" does not exist! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
+                    print(f'{RED}Interface "{interface}" does not exist! Type "wifighter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
           else:
-               print(f'{RED}Invalid Command! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
+               print(f'{RED}Invalid Command! Type "wifighter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
      else:
-          print(f'{RED}Invalid Command! Type "wifigter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
+          print(f'{RED}Invalid Command! Type "wifighter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
 else:
      introduction()
      # Choose scanning/attacking interface
