@@ -52,7 +52,10 @@ sudo ./wifighter.py
 
 ## WiFi Scan & Select
 
-
+1. Fix channel 
+2. Fix device busy
+3. Client scanning
+4. Encryption type
 
 
 ## Threat Hunt
@@ -102,7 +105,7 @@ sudo airodump-ng --band a <ESSID> <INTERFACE>mon
 
 Listen for handshake of specified AP
 ```c
-sudo airodump-ng -c <CHANNEL> --bssid <BSSID> -w <OUTPUT_PATH> <INTERFACE>mon
+sudo airodump-ng -c <CHANNEL> --bssid <BSSID> -w <OUTPUT_FILE> <INTERFACE>mon
 ```
 
 **Deauth clients (force handshake)**

@@ -81,7 +81,6 @@ def stop_service(service):
 
 def interface_mode(interface):
      mode = None
-
      output = os.popen(f'sudo iwconfig {interface} 2>/dev/null').read()
      for line in output.splitlines():
           if 'Mode' in line:

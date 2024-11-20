@@ -1,5 +1,10 @@
 #!venv/bin/python
 
+
+
+
+# MANUAL WPA CAPTURE ATTEMPT #
+"""
 import binascii
 import hashlib
 import hmac
@@ -63,3 +68,4 @@ with open(wordlist_file, 'r') as wordlist:
             break
         else:
             print("Password not found.")
+"""
