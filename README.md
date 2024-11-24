@@ -128,7 +128,7 @@ sudo aircrack-ng <HANDSHAKE>.cap
 **Crack handshake - aircrack**
 
 ```c
-sudo aircrack-ng -w <WORDLIST> -b <TRAGET_AP_MAC> <HANDSHAKE>.cap
+sudo aircrack-ng -w <WORDLIST> -b <TARGET_AP_MAC> <HANDSHAKE>.cap
 ```
 
 **Crack handshake - hashcat**

