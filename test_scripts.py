@@ -16,12 +16,22 @@ deauth_type = "client"
 output_dir = f"/home/filip/Coding/WiFighter/attacks/{ssid}"
 output_file = f"{output_dir}/handshake"
 
+def list_files(directory): 
+    return set(os.listdir(directory))
+
+files_before = list_files(output_dir)
+#print(files_before)
+
 #os.system(f"sudo airodump-ng -c {channel} --bssid {bssid} -w {output_file} {interface} > /dev/null")
 #subprocess.Popen(['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_file}', interface], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-command = ['sudo', 'aircrack-ng', f'{output_file}-01.cap']
-verify = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
-stdout = str(verify.communicate())
-print(stdout)
+
+
+
+
+
+
+
+
 """
 import os, sys, subprocess, time
 import threading
