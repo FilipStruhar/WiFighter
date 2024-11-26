@@ -31,7 +31,6 @@ files_before = list_files(output_dir)
 
 
 
-
 """
 import os, sys, subprocess, time
 import threading

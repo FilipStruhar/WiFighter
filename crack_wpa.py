@@ -1,8 +1,8 @@
 #!venv/bin/python
 
-import os, sys, subprocess, time
+import os, subprocess, time
 import multiprocessing
-import re
+
 
 interface = "wlp1s0mon"
 

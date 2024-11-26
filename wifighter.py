@@ -32,7 +32,7 @@ LOGO = r"""
 
 # | GLOBAL VARIABLES | #
 
-ap_list = []
+wifi_networks = []
 interface = None
 target_ap = None
 
@@ -64,31 +64,29 @@ def start_service(service):
      status = os.popen(f'systemctl is-active {service}').read().strip()
 
      if status == 'inactive':
-          print(f"{CYAN}Starting {service}...{RESET}")
+          print(f"{CYAN}Starting {service} service...{RESET}")
           os.system(f'systemctl start {service}')
      else:
-          print(f"{CYAN}{service} is already running.{RESET}")
+          print(f"{CYAN}{service} service is already running.{RESET}")
 
 def stop_service(service):
      status = os.popen(f'systemctl is-active {service}').read().strip()
 
      if status == 'active':
-          print(f"{CYAN}Stopping {service}...{RESET}")
+          print(f"{CYAN}Stopping {service} service...{RESET}")
           os.system(f'systemctl stop {service}')
      else:
-          print(f"{CYAN}{service} is not running.{RESET}")
+          print(f"{CYAN}{service} service is not running.{RESET}")
 
 
 def interface_mode(interface):
      mode = None
-     output = os.popen(f'sudo iwconfig {interface} 2>/dev/null').read()
-     for line in output.splitlines():
-          if 'Mode' in line:
-               if 'Managed' in line:
-                    mode = 'Managed'
-               elif 'Monitor' in line:
-                    mode = 'Monitor'
-               break
+     interface_info = os.popen(f'iw dev {interface} info').read()
+     if 'type managed' in interface_info:
+          mode = 'Managed'
+     elif 'type monitor' in interface_info:
+          mode = 'Monitor'
+
      return mode
 
 
@@ -105,21 +103,20 @@ def monitor_switch(command, interface):
                     stop_service(service)
 
                # Switch interface to Monitor
-               os.system(f'ifconfig {interface} down')
+               os.system(f'ip link set {interface} down')
                print(f"{CYAN}\nSetting {interface} to monitor mode...{RESET}")
-               os.system(f'iwconfig {interface} mode monitor')
-               os.system(f'ifconfig {interface} up')
-
+               os.system(f'iw dev {interface} set type monitor')
+               os.system(f'ip link set {interface} up')
           elif command == "start":
                print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...\n{RESET}')
           
           # Stop Monitor mode
           if command == "stop" and mode == "Monitor":
                # Switch interface to Managed
-               os.system(f'ifconfig {interface} down')
+               os.system(f'ip link set {interface} down')
                print(f"{CYAN}\nSetting {interface} to managed mode...{RESET}")
-               os.system(f'iwconfig {interface} mode managed')
-               os.system(f'ifconfig {interface} up')
+               os.system(f'iw dev {interface} set type managed')
+               os.system(f'ip link set {interface} up')
 
                # Start needed services
                for service in interfering_services:
@@ -181,7 +178,7 @@ def choose_interface():
 
      
 def choose_target():
-     global ap_list
+     global wifi_networks
 
      try:
           while True:     
@@ -192,8 +189,8 @@ def choose_target():
                     print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
                # Check if the choice is in range
-               if 0 <= choice < len(ap_list):
-                    target_ap = ap_list[choice]
+               if 0 <= choice < len(wifi_networks):
+                    target_ap = wifi_networks[choice]
                     return target_ap # Return chosen interface
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
@@ -206,7 +203,7 @@ def choose_target():
 # | AP Scan | #
 
 def scan_ap(interface):
-     ap_list = []
+     wifi_networks = []
 
      # Retrieve Wi-Fi scan output from iw
      estimated_scan_time = 1
@@ -214,8 +211,11 @@ def scan_ap(interface):
      for _ in tqdm(range(estimated_scan_time * 10), desc=f"Scanning for APs on {interface}", ncols=100):
           if scan is None:
                scan = os.popen(f'iw dev {interface} scan').read()
+               if 'device busy' in scan or 'command failed' in scan:
+                    scan = None
+                    return
           time.sleep(0.1)
-
+     #2>&1
      # Divide the output into separate AP sections (split by specific BSS occurrence)
      ap_array = re.split(r"(?=BSS [0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})", scan)
      
@@ -226,7 +226,7 @@ def scan_ap(interface):
      ssid_pattern = r'SSID:\s*(.+)'
      bssid_pattern = r"([0-9A-Fa-f:]{17})"           
      signal_pattern = r"signal: (-?\d+\.\d+) dBm"
-     channel_pattern = r"DS Parameter set: channel (\d+)" 
+     channel_pattern = r"primary channel: (\d+)"
      frequency_pattern = r"freq: (\d+\.\d+)" 
      auth_pattern = r'\* Authentication suites: (.+?)\n'
      cipher_pattern = r'\* Pairwise ciphers: (.+?)\n'
@@ -271,7 +271,7 @@ def scan_ap(interface):
                     encryption = 'WEP'  
 
           # Append parsed AP information to array
-          ap_list.append({
+          wifi_networks.append({
                'SSID': ssid,
                'BSSID': bssid,
                'Channel': channel,
@@ -283,15 +283,15 @@ def scan_ap(interface):
           })
                     
      # Sort array by signal strength (strongest first)
-     ap_list = sorted(ap_list, key=lambda x: x['Signal'], reverse=False)
+     wifi_networks = sorted(wifi_networks, key=lambda x: x['Signal'], reverse=False)
 
-     return ap_list
+     return wifi_networks
 
-def list_ap(ap_list):
+def list_ap(wifi_networks):
      # Create AP table
      table = PrettyTable()
      table.field_names = ["ID", "SSID", "BSSID", "Channel", "Signal (dBm)", "Band", "Encryption", "Auth", "Cipher"]
-     for idx, ap in enumerate(ap_list):
+     for idx, ap in enumerate(wifi_networks):
           table.add_row([
                f"{idx}",
                ap['SSID'] or "N/A",
@@ -347,11 +347,16 @@ else:
      if interface:
           try:
                while True:
-                    ap_list = scan_ap(interface) # Get available AP's
-                    introduction()
-                    list_ap(ap_list) # Show available AP's in table
+                    # Get available AP's
+                    scan_output = scan_ap(interface) # Get output array from iw
+                    if scan_output:
+                         wifi_networks = scan_output 
+                    if wifi_networks:
+                         introduction()
+                         list_ap(wifi_networks) # Show available AP's in table
+                    time.sleep(1) # Wait before each scan
           except KeyboardInterrupt:
-               if ap_list:
+               if wifi_networks:
                     target_ap = choose_target() # Let user choose AP as target
                else:
                     print(f"{RED}No AP's found, exiting...{RESET}\n")

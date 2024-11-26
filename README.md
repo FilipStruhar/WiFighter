@@ -1,9 +1,6 @@
 # WiFighter
 Easy-to-use WiFI pen-testing/scanning tool written in python
 
-## Filip's Notes 
-- AP scanning in progress
-
 
 ## Installation 
 
@@ -52,11 +49,10 @@ sudo ./wifighter.py
 
 ## WiFi Scan & Select
 
-1. Fix channel 
-2. Fix device busy
-3. Client scanning
-4. Encryption type
-
+1. Fix device busy (missing: if error erase tqdm progress bar)
+2. Client scanning
+3. Encryption type
+4. Make sure interface in managed with NetworkManager on before scanning
 
 ## Threat Hunt
 
