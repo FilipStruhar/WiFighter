@@ -1,0 +1,8 @@
+
+BSSID, First time seen, Last time seen, channel, Speed, Privacy, Cipher, Authentication, Power, # beacons, # IV, LAN IP, ID-length, ESSID, Key
+40:ED:00:17:E0:D8, 2024-11-27 20:48:59, 2024-11-27 20:49:03,  6, 360, WPA2, CCMP, PSK, -45,       44,       34,   0.  0.  0.  0,  14, Struhar 2.4GHz, 
+
+Station MAC, First time seen, Last time seen, Power, # packets, BSSID, Probed ESSIDs
+02:26:02:03:25:E0, 2024-11-27 20:49:00, 2024-11-27 20:49:03, -32,      110, 40:ED:00:17:E0:D8,
+34:E6:AD:BA:A0:54, 2024-11-27 20:49:00, 2024-11-27 20:49:02, -63,        6, 40:ED:00:17:E0:D8,
+

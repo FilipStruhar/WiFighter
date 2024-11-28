@@ -50,7 +50,7 @@ sudo ./wifighter.py
 ## WiFi Scan & Select
 
 1. Fix device busy (missing: if error erase tqdm progress bar)
-2. Client scanning
+2. Client scanning (scapy/pyseek)
 3. Encryption type
 4. Make sure interface in managed with NetworkManager on before scanning
 

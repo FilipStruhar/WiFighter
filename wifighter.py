@@ -204,7 +204,7 @@ def choose_target():
 
 def scan_ap(interface):
      wifi_networks = []
-
+     """
      # Retrieve Wi-Fi scan output from iw
      estimated_scan_time = 1
      scan = None
@@ -216,6 +216,20 @@ def scan_ap(interface):
                     return
           time.sleep(0.1)
      #2>&1
+     """
+     estimated_scan_time = 1
+     scan = None
+     progress_bar = tqdm(range(estimated_scan_time * 10), desc=f"Scanning for APs on {interface}", ncols=100)
+     
+     for _ in progress_bar:
+          if scan is None:
+               scan = os.popen(f'iw dev {interface} scan 2>&1').read()
+               if 'device busy' in scan or 'command failed' in scan:
+                    scan = None
+                    progress_bar.close()  # Close the progress bar if the scan fails
+                    return
+          time.sleep(0.1)
+
      # Divide the output into separate AP sections (split by specific BSS occurrence)
      ap_array = re.split(r"(?=BSS [0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2})", scan)
      
