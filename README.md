@@ -31,7 +31,7 @@ Enter the virtual enviroment
 source venv/bin/activate
 ```
 
-Install python modules (prettytable, tqdm) 
+Install python modules (prettytable, tqdm, psutil) 
 ```c
 pip3 install -r requirements.txt
 ```
@@ -48,11 +48,10 @@ sudo ./wifighter.py
 
 
 ## WiFi Scan & Select
+- Client scanning (scapy/pyseek)
+- WPS scan
 
-1. Fix device busy (missing: if error erase tqdm progress bar)
-2. Client scanning (scapy/pyseek)
-3. Encryption type
-4. Make sure interface in managed with NetworkManager on before scanning
+- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions
 
 ## Threat Hunt
 
