@@ -48,6 +48,7 @@ sudo ./wifighter.py
 
 
 ## WiFi Scan & Select
+- kill, wake subcommands
 - Client scanning (scapy/pyseek)
 - WPS scan
 
