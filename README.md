@@ -48,18 +48,18 @@ sudo ./wifighter.py
 
 
 ## WiFi Scan & Select
-- kill, wake subcommands
 - Client scanning (scapy/pyseek)
 - WPS scan
 
-- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions
-
-## Threat Hunt
-
-
-
 
 ## Attack mode
+- dodelat handshake crack - deauth type, mody utoku (potreba client scan), poresit kdyz AP nema SSID
+- zkouset po intervalech deauth + jak to bude kdyz dlouho nic nechyti?
+- zkusit crack? pripadne zpracovat aircrack-ng
+- design handshake crack
+- konecny monitor switch start - verbose nebo ne?
+
+- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions
 
 ### 1. WPA/WPA2 Handshake Crack
 
