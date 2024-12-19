@@ -53,11 +53,9 @@ sudo ./wifighter.py
 
 
 ## Attack mode
-- dodelat handshake crack - deauth type, mody utoku (potreba client scan), poresit kdyz AP nema SSID
 - zkouset po intervalech deauth + jak to bude kdyz dlouho nic nechyti?
 - zkusit crack? pripadne zpracovat aircrack-ng
-- design handshake crack
-- konecny monitor switch start - verbose nebo ne?
+- design handshake cracks
 
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions
 
