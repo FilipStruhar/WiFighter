@@ -178,7 +178,10 @@ def choose_interface():
 
      idx = 1
      # Show detected interfaces
-     print(f"{MAGENTA}Select Wi-Fi Interface:{RESET}")
+     print(f"{CYAN}| Select Interface |{RESET}")
+     print()
+
+     #print(f"Select Wi-Fi Interface:")
      for interface in detected_interfaces:
           print(f"{idx}. {interface}")
           idx += 1
@@ -208,7 +211,7 @@ def choose_target():
           while True:     
                try:
                     # Prompt the user to choose an interface by number
-                    choice = int(input(f"\n\n{MAGENTA}Select the interface number: {RESET}"))
+                    choice = int(input(f"\n\nTarget number: "))
                except ValueError:
                     print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
@@ -224,7 +227,7 @@ def choose_target():
 def choose_attack(target_ap):
      global attack_list
 
-     print(f'{MAGENTA}| Attack Modes |{RESET}')
+     print(f'{CYAN}| Select Attack |{RESET}')
      print()
      target_ap = target_ap['BSSID'] + ' -> ' + target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID']
      print(f'Select attack on {target_ap}')
@@ -238,7 +241,7 @@ def choose_attack(target_ap):
           while True:     
                try:
                     # Prompt the user to choose an attack by number
-                    choice = int(input(f"\nSelect the attack number: ")) - 1
+                    choice = int(input(f"\nAttack number: ")) - 1
                except ValueError:
                     print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
@@ -255,7 +258,7 @@ def choose_attack(target_ap):
 def choose_deauth_mode():
      global deauth_modes
      
-     print(f'{MAGENTA}| Deauth Modes |{RESET}')
+     print(f'{CYAN}| Select Deauth Mode |{RESET}')
      print()
 
      idx = 1
@@ -267,7 +270,7 @@ def choose_deauth_mode():
           while True:     
                try:
                     # Prompt the user to choose an deauth mode by number
-                    choice = int(input(f"\nSelect the deauth_mode number: ")) - 1
+                    choice = int(input(f"\nMode number: ")) - 1
                except ValueError:
                     print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
@@ -422,7 +425,7 @@ def list_ap(wifi_networks):
                ap['Cipher'] or "N/A"
           ])
 
-     print("Available Wi-Fi networks:")
+     print(f"{CYAN}| AP Scan |{RESET}")
      print(f"{MAGENTA}{table}{RESET}")
      print("\nPress [Ctrl + C] to stop")
 
@@ -503,8 +506,10 @@ def handshake_crack(target_ap, interface, deauth_mode):
                     except:
                          pass
      
-     print(f'Attacking on {ssid} ({bssid}) on {interface}')
-     print()
+     if ssid:
+          print(f'Attacking on {ssid} ({bssid}) with {interface}...')
+     else:
+          print(f'Attacking on {bssid} with {interface}...')
 
      create_cap_dir(target) # Create capture dir if not exist
 
@@ -624,7 +629,8 @@ else:
                deauth_mode = choose_deauth_mode()
                if deauth_mode:
                     logo()
-                    print(f'{MAGENTA}| Handshake Crack |{RESET}')
+                    print(f'{CYAN}| Handshake Crack |{RESET}')
+                    print()
                     monitor_switch(None, 'start', interface) # Make sure interface is in Monitor
                     stop_services(None) # Make sure interfering services are not running
                     try:
