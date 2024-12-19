@@ -55,7 +55,6 @@ sudo ./wifighter.py
 ## Attack mode
 - zkouset po intervalech deauth + jak to bude kdyz dlouho nic nechyti?
 - zkusit crack? pripadne zpracovat aircrack-ng
-- design handshake cracks
 
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions
 
