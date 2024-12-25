@@ -31,7 +31,7 @@ Enter the virtual enviroment
 source venv/bin/activate
 ```
 
-Install python modules (prettytable, tqdm, psutil) 
+Install python modules (prettytable, psutil, scapy) 
 ```c
 pip3 install -r requirements.txt
 ```
@@ -53,7 +53,6 @@ sudo ./wifighter.py
 
 
 ## Attack mode
-- zkouset po intervalech deauth + jak to bude kdyz dlouho nic nechyti?
 - zkusit crack? pripadne zpracovat aircrack-ng
 
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions

