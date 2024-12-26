@@ -48,14 +48,18 @@ sudo ./wifighter.py
 
 
 ## WiFi Scan & Select
-- Client scanning (scapy/pyseek)
-- WPS scan
+- WPS scan?
+- problikava array APcek pri refresh skenu
+
+## Attacking
+- generovat report o handshake crack
+- client sniff timeout
 
 
-## Attack mode
-- zkusit crack? pripadne zpracovat aircrack-ng
+## Future visions
+- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
+- Udelat moznost urychleneho pouzivani pomoci commandu??
 
-- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions
 
 ### 1. WPA/WPA2 Handshake Crack
 
