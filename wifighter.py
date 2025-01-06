@@ -78,13 +78,42 @@ def logo():
  # | Global Functions | #
 
 def create_cap_dir(target, output_dir):
-          if target:
-               if os.path.exists(output_dir):
-                    pass
-               else:
-                    print(f"Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
-                    os.system(f'mkdir {output_dir}')
-                    print()  
+     if target:
+          if os.path.exists(output_dir):
+               pass
+          else:
+               print(f"Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
+               os.system(f'mkdir {output_dir}')
+               print()
+
+def generate_report(attack, target_ap, crack, target, output_dir):
+     current_time = datetime.now()
+     timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
+     filename = attack.lower().replace(" ", "_") + f'_{str(timestamp).replace(" ", "_")}'
+
+     print(f"{CYAN}[>]{RESET} Generating report -> WiFighter/attacks/{target.replace(' ', '_')}/{filename}.report \n")
+
+     template = f"""
+| {target} - {timestamp} |
+
+* {attack} *
+
+SSID: {target_ap['SSID']}
+BSSID: {target_ap['BSSID']}
+Channel: {target_ap['Channel']}
+Band: {target_ap['Band']}
+----
+Encryption: {target_ap['Encryption']}
+Authetication: {target_ap['Auth']}
+Cipher: {target_ap['Cipher']}
+
+Cracked wifi password: {crack}
+     """
+
+     create_cap_dir(target, output_dir)
+     with open(f'{output_dir}/{filename}.report', 'w') as report:
+          report.write(template)
+
 
 #---------------------------------
 
@@ -403,18 +432,19 @@ def scan_ap(interface):
                     encryption = 'WEP' 
           else:
                encryption = "Open/Unknown"
-
-          # Append parsed AP information to array
-          wifi_networks.append({
-               'SSID': ssid,
-               'BSSID': bssid,
-               'Channel': channel,
-               'Signal': signal,
-               'Band': band,
-               'Encryption': encryption,
-               'Auth': auth,
-               'Cipher': cipher
-          })
+          
+          if int(signal) > -100:
+               # Append parsed AP information to array
+               wifi_networks.append({
+                    'SSID': ssid,
+                    'BSSID': bssid,
+                    'Channel': channel,
+                    'Signal': signal,
+                    'Band': band,
+                    'Encryption': encryption,
+                    'Auth': auth,
+                    'Cipher': cipher
+               })
                     
      # Sort array by signal strength (strongest first)
      wifi_networks = sorted(wifi_networks, key=lambda x: x['Signal'], reverse=False)
@@ -510,7 +540,7 @@ def handshake_crack(target_ap, interface, deauth_mode):
      if deauth_mode == 'client deauth' and not target_client:
           global sniffed_clients
           logo()
-          print(f"{CYAN}[>]{RESET} Sniffing for {target}'s clients...")
+          print(f"Sniffing for {target}'s clients...")
           try:
                while True:
                     # Get available AP's
@@ -651,14 +681,14 @@ def handshake_crack(target_ap, interface, deauth_mode):
           output = str(crack.communicate())
 
           if 'KEY FOUND!' in output:
-               #print(output)
                password_pattern = r'KEY FOUND!\s* \[\s*(.+?)\s*\]'
                password_match = re.search(password_pattern, output) # Search for the pattern in the output string
 
                # Extract and print the key if found
                if password_match:
                     password = password_match.group(1)
-                    print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]\n")
+                    print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
+                    generate_report('Handshake Crack', target_ap, password, target, output_dir)
      except KeyboardInterrupt:
           pass
 
