@@ -45,6 +45,7 @@ target_ap = None
 attack = None
 attack_mode = None
 sniffed_clients = []
+output_file = None
 
 # Get the full path of wifighter dir
 wifighter_path = os.path.dirname(os.path.abspath(__file__))
@@ -85,7 +86,7 @@ def create_cap_dir(target, output_dir):
 
 def create_dir(path):
      if not os.path.exists(path):
-          os.system(f'mkdir -f {path}')
+          os.system(f'mkdir -p {path}')
         
 
 def generate_report(attack, target_ap, crack, target, output_dir):
@@ -93,7 +94,7 @@ def generate_report(attack, target_ap, crack, target, output_dir):
      timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
      filename = attack.lower().replace(" ", "_") + f'_{str(timestamp).replace(" ", "_")}'
 
-     print(f"{YELLOW}[>]{RESET} Generating report -> WiFighter/attacks/{target.replace(' ', '_')}/{filename}.report")
+     print(f"{YELLOW}[>]{RESET} Generating report -> WiFighter/attacks/{target.replace(' ', '_')}/reports/{filename}.report")
 
      template = f"""
 | {target} - {timestamp} |
@@ -113,7 +114,7 @@ Cracked wifi password: {crack}
      """
 
      create_cap_dir(target, output_dir)
-     with open(f'{output_dir}/{filename}.report', 'w') as report:
+     with open(f'{output_dir}/reports/{filename}.report', 'w') as report:
           report.write(template)
 
 
@@ -548,7 +549,7 @@ def list_clients(sniffed_clients, ssid, bssid):
      print(f"{MAGENTA}{table}{RESET}")
      print("\nPress [Ctrl + C] to stop")
 def choose_target_client():
-     global sniffed_clients
+     global sniffed_clients, wifighter_path, output_file
      try:
           while True:     
                try:
@@ -579,7 +580,6 @@ def handshake_crack(target_ap, interface, deauth_mode):
 
      # Set deauth client if needed
      if deauth_mode == 'client deauth' and not target_client:
-          global sniffed_clients
           logo()
           print(f"Sniffing for {target}'s clients...")
           try:
@@ -601,13 +601,12 @@ def handshake_crack(target_ap, interface, deauth_mode):
                     print(f"\n\n{RED}No clients found, exiting...{RESET}\n")
 
 
-     global wifighter_path
+     # Define output dir for handshakes
      output_dir = f"{wifighter_path}/attacks/{target.replace(' ', '_')}"
 
-
+     # Determine handshake capture file
      def list_files(directory): 
           return set(os.listdir(directory))
-
      def cap_file(files_before, files_after):
           new_files = files_after - files_before
 
@@ -615,6 +614,7 @@ def handshake_crack(target_ap, interface, deauth_mode):
                if '.cap' in filename:
                     return filename       
 
+     # Kill airodump processes after capturing handshake
      def kill_airodump_processes():
           for proc in psutil.process_iter(['pid', 'name']):
                try:
@@ -742,6 +742,7 @@ def handshake_crack(target_ap, interface, deauth_mode):
                     if password_match:
                          password = password_match.group(1)
                          print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
+                         create_dir(f'{output_dir}/reports')
                          generate_report('Handshake Crack', target_ap, password, target, output_dir)
           except KeyboardInterrupt:
                pass
