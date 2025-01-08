@@ -52,9 +52,10 @@ sudo ./wifighter.py
 - problikava array APcek pri refresh skenu
 
 ## Attacking
-- upozorneni na WPA3 a EAP auth site (nepujde cracknout)
+- udelat reports dir do WiFighter/attacks
+- mazat prazdne/nechycene handshaky z attacks
 - client sniff timeout / ctrl + c
-- vyber wordlistu
+- vyber vice wordlistu ?
 
 ## Future visions
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
