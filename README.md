@@ -7,7 +7,9 @@ Easy-to-use WiFI pen-testing/scanning tool written in python
 **Dependencies**
 ```c
 sudo zypper in python3 aircrack-ng hashcat ...
+
 ```
+- REAVER: githubproject
 
 **Creating python virtual enviroment**
 
@@ -49,17 +51,17 @@ sudo ./wifighter.py
 
 ## WiFi Scan & Select
 - WPS scan?
-- problikava array APcek pri refresh skenu
 
 ## Attacking
-- udelat reports dir do WiFighter/attacks
-- mazat prazdne/nechycene handshaky z attacks
 - client sniff timeout / ctrl + c
-- vyber vice wordlistu ?
+- wps cracking
+- client jamming
+- loading animation on jamming
 
 ## Future visions
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
-- Udelat moznost urychleneho pouzivani pomoci commandu??
+- vyber vice wordlistu najednou?
+- mazat prazdne/nechycene handshaky z attacks?
 
 
 ### 1. WPA/WPA2 Handshake Crack
