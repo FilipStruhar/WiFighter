@@ -35,7 +35,7 @@ LOGO = r"""
 
 # | GLOBAL VARIABLES | #
 
-interfering_services = ['NetworkManager', 'wpa_supplicant']
+interfering_services = ['NetworkManager', 'wpa_supplicant', 'avahi-daemon']
 attack_list = ['Handshake Crack', 'WPS Crack', 'Jamming']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 jammer_modes = ['Client jamming', 'Broadcast jamming']
@@ -63,7 +63,7 @@ def introduction():
      print(f"{BLUE}Welcome :D This is WiFighter!{RESET}")
      print(f"{BLUE}Easy-to-use WiFi pen-testing security tool{RESET}")
      #print(" ")
-     #print(f"{MAGENTA}Build by Filip Struhar | https://github.com/FilipStruhar{RESET}")
+     #print(f"{MAGENTA}Developed by Filip Struhar | https://github.com/FilipStruhar{RESET}")
 
      print()
      print()
@@ -161,7 +161,7 @@ def interface_mode(interface):
      return mode
 
 
-def monitor_switch(verbose, command, interface):
+def monitor_switch(verbose, command, interface, channel):
      mode = interface_mode(interface)
 
      if mode:
@@ -176,9 +176,11 @@ def monitor_switch(verbose, command, interface):
                     print(f"{CYAN}Setting {interface} to monitor mode...{RESET}")
                os.system(f'iw dev {interface} set type monitor 2>&1')
                os.system(f'ip link set {interface} up 2>&1')
+               if channel: 
+                    os.system(f'iw dev {interface} set channel {channel} 2>&1') # Listen specific channel if provided
           elif command == "start":
                if verbose:
-                print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...{RESET}')
+                    print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...{RESET}')
           
           # Stop Monitor mode
           if command == "stop" and mode == "Monitor":
@@ -247,7 +249,7 @@ def choose_interface():
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
-          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+          pass
 
 def choose_target():
      global wifi_networks
@@ -266,7 +268,7 @@ def choose_target():
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
-          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+          pass
 
 def choose_attack(target_ap):
      global attack_list
@@ -296,7 +298,7 @@ def choose_attack(target_ap):
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
-          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+          pass
 
 def choose_deauth_mode():
      global deauth_modes
@@ -324,7 +326,7 @@ def choose_deauth_mode():
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
-          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+          pass
 
 def choose_jammer_mode():
      global jammer_modes
@@ -352,7 +354,7 @@ def choose_jammer_mode():
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
-          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+          pass
 
 def choose_wordlist():
      global wifighter_path
@@ -547,25 +549,41 @@ def list_ap(wifi_networks):
 # | Handshake Crack | #
 
 def sniff_clients(interface, target_ap):
+     # Standardized MAC addresses in networking (communication with .startswith(these) won't appear as a result of the sniffing)
+     standardized_MACs = ['ff:ff:ff:ff:ff:ff', '01:80:c2:00:00:00', '01:80:c2:00:00:0e', '01:00:5e', '33:33']
+     interrupted = False
+
      clients = set()
      def packet_handler(pkt):
         if pkt.haslayer(Dot11):
-            # Check if the packet is a data frame and from/to the target BSSID
-            if pkt.type == 2 and (pkt.addr2 == target_ap or pkt.addr1 == target_ap):
-                if pkt.addr2 == target_ap and pkt.addr1 not in clients and pkt.addr1.lower() != 'ff:ff:ff:ff:ff:ff':
-                    client = f'{pkt.addr2} -> {pkt.addr1}' # AP MAC -> Client MAC
-                    clients.add(client)
-                elif pkt.addr1 == target_ap and pkt.addr2 not in clients and pkt.addr2.lower() != 'ff:ff:ff:ff:ff:ff':
-                    client = f'{pkt.addr1} -> {pkt.addr2}' # AP MAC -> Client MAC
-                    clients.add(client)
+            # Check if the packet is a data frame
+            if pkt.type == 2: 
+               if pkt.addr2 == target_ap and pkt.addr1 not in clients: 
+                    # Check if not one of the standardized MAC addresses
+                    if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs): 
+                         #print(f'2 {pkt.addr2} = {target_ap}, | {pkt.addr1} |')
+                         #client = f'{pkt.addr2} -> {pkt.addr1}' # AP MAC -> Client MAC
+                         clients.add(pkt.addr1)
+
+               elif pkt.addr1 == target_ap and pkt.addr2 not in clients:
+                    # Check if not one of the standardized MAC addresses
+                    if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs):
+                         #print(f'1 {pkt.addr1} = {target_ap}, | {pkt.addr2} |')
+                         #client = f'{pkt.addr1} -> {pkt.addr2}' # AP MAC -> Client MAC
+                         clients.add(pkt.addr2)
      #print('Start sniffing')
-     sniff(iface=interface, prn=packet_handler, timeout=10)  # Start sniffing on the specified interface
+     try:
+          sniff(iface=interface, prn=packet_handler, timeout=8)  # Start sniffing on the specified interface
+     except KeyboardInterrupt:
+          print('Keyboard interrupt in sniff caught!')
+          interrupted = True
      #print('Stop sniffing')
-     return list(clients)
+     #print(f'Sniff: interrupted {interrupted}')
+     return list(clients), interrupted
 def list_clients(sniffed_clients, ssid, bssid):
      # Create AP table
      table = PrettyTable()
-     table.field_names = ["ID", "AP MAC -> Client MAC"]
+     table.field_names = ["ID", "Client MAC"]
      for idx, client_mac in enumerate(sniffed_clients):
           table.add_row([
                f"{idx}",
@@ -577,7 +595,7 @@ def list_clients(sniffed_clients, ssid, bssid):
           print(f"{CYAN}| {bssid} Clients |{RESET}")
      print(f"{MAGENTA}{table}{RESET}")
      print("\nPress [Ctrl + C] to stop")
-def choose_target_client():
+def choose_target_client(sniffed_clients):
      try:
           while True:     
                try:
@@ -593,42 +611,44 @@ def choose_target_client():
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
-          print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+          pass
 
-def handshake_crack(target_ap, interface, deauth_mode):
+def handshake_crack(target_ap, interface, deauth_mode, target):
      global sniffed_clients, wifighter_path
 
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
      bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
-     target = ssid if ssid else bssid # Set target by checking if SSID set
      channel = target_ap['Channel'] if target_ap['Channel'] else None
      deauth_mode = deauth_mode.lower()
      target_client = None
      wordlist = None
      password = None
 
-     # Set deauth client if needed
-     if deauth_mode == 'client deauth' and not target_client:
+     # Set deauth client if attack mode "Client deauth"
+     if deauth_mode == 'client deauth':
           logo()
           print(f"Sniffing for {target}'s clients...")
           try:
                while True:
                     # Get available AP's
-                    sniff_output = sniff_clients(interface, bssid) # Get output array from iw
-                    #print(sniff_output)
-                    if sniff_output and isinstance(sniff_output, list):
-                         sniffed_clients = sniff_output 
-                    if sniffed_clients:
-                         logo()
-                         list_clients(sniffed_clients, ssid, bssid) # Show available clients's in table
-                    time.sleep(3)
+                    sniffed_clients, interrupted = sniff_clients(interface, bssid) # Get output array from iw
+                    #print(f'Func: interrupted {interrupted}')
+                    if interrupted:
+                         break
+                    #print(sniffed_clients)
+                    logo()
+                    list_clients(sniffed_clients, ssid, bssid) # Show available clients's in table
+
+                    time.sleep(3) # Time for user to end the scan
           except KeyboardInterrupt:
+               print(f'choose from {sniffed_clients}')
                if sniffed_clients:
-                    # Let user choose client as target
-                    target_client = choose_target_client().split('->')[1].strip() # Cut of the "AP MAC ->"" from the string
-               else:
-                    print(f"\n\n{RED}No clients found, exiting...{RESET}\n")
+                    try:
+                         # Let user choose client as target
+                         target_client = choose_target_client(sniffed_clients)
+                    except:
+                         pass
 
 
      # Define output dir for handshakes
@@ -859,7 +879,7 @@ if cmd_lenght > 1:
           interface = sys.argv[2]
 
           if command == "start" or command == "stop": # Interface mode switch function
-               monitor_switch('verbose', command, interface)
+               monitor_switch('verbose', command, interface, None)
                print()
           elif command == "status": # Show interface mode status
                mode = interface_mode(interface)
@@ -879,7 +899,7 @@ else:
 
      # Scan and choose target AP
      if interface:
-          monitor_switch(None, 'stop', interface) # Make sure interface is in Managed
+          monitor_switch(None, 'stop', interface, None) # Make sure interface is in Managed
           start_services(None) # Make sure network services are running
           try:
                while True:
@@ -892,10 +912,10 @@ else:
                          list_ap(wifi_networks) # Show available AP's in table
                     time.sleep(1) # Wait before each scan
           except KeyboardInterrupt:
-               if wifi_networks:
+               if wifi_networks and target_ap['BSSID'] and target_ap['Channel']:
                     target_ap = choose_target() # Let user choose AP as target
                else:
-                    print(f"\n\n{RED}No AP's found, exiting...{RESET}\n")
+                    print(f"\n\n{RED}No AP's found or the selected one is missing mandatory parameters!{RESET}")
 
      # List attack possibilities
      if target_ap:
@@ -904,16 +924,17 @@ else:
      
      # Run attacks
      if attack:
-          monitor_switch('verbose', 'start', interface) # Make sure interface is in Monitor
+          monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
           stop_services('verbose') # Make sure interfering services are not running
+          target = target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID'] # Set target by checking if SSID set
           logo()
           if attack == 'Handshake Crack':
                deauth_mode = choose_deauth_mode()
                if deauth_mode:
                     try:
-                         handshake_crack(target_ap, interface, deauth_mode) # Start attack
+                         handshake_crack(target_ap, interface, deauth_mode, target) # Start attack
                     except KeyboardInterrupt:
-                         print(f"\n\n{BLUE}Exiting the tool...{RESET}")
+                         pass
 
           elif attack == 'WPS Crack':
                print('WPS...')
@@ -924,15 +945,13 @@ else:
                     try:
                          jam_network(target_ap, interface, jammer_mode) # Start attack
                     except KeyboardInterrupt:
-                         print(f"\n\n{BLUE}Exiting the tool...{RESET}")
-
+                         pass
      
 
      # On tool end turn everything back on
      print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      if interface:
           try:
-               monitor_switch(None, 'stop', interface)
-          except KeyboardInterrupt:
-               print(f"\n\n{BLUE}Exiting the tool...{RESET}")
-     
+               monitor_switch(None, 'stop', interface, None)
+          except:
+               pass

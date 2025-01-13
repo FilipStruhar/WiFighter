@@ -53,7 +53,7 @@ sudo ./wifighter.py
 - WPS scan?
 
 ## Attacking
-- client sniff timeout / ctrl + c
+- client sniff timeout and ctrl + c ending
 - wps cracking
 - client jamming
 - loading animation on jamming
