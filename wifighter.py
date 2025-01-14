@@ -749,9 +749,6 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
      output_file = cap_file(files_before, files_after) # Determine output_file in which airodump-ng stores
-     
-     print(deauth_mode)
-     time.sleep(3)
 
      # Wait and verify that handshake was captured successfuly
      captured = False
