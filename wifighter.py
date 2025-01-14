@@ -737,7 +737,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      # Switch to silent deauth mode when target AP was not set and deauth mode was client deauth
      if deauth_mode == 'client deauth':
           if not target_client:
-               print(f'{YELLOW}No target client set!{RESET}')
+               print(f'{YELLOW}No target client set, switching to silent deauth mode...{RESET}')
                deauth_mode = 'silent'
 
      create_cap_dir(target, output_dir) # Create capture dir if not exist
