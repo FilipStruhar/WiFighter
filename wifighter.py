@@ -383,7 +383,7 @@ def choose_wordlist():
                while True:     
                     try:
                          # Prompt the user to choose an interface by number
-                         choice = int(input(f"\nWordlist number: ")) - 1
+                         choice = int(input(f"\nWordlist number (if you wish to skip press [ctrl + c]): ")) - 1
                     except ValueError:
                          print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                          continue
@@ -550,7 +550,7 @@ def list_ap(wifi_networks):
 
 # | Handshake Crack | #
 
-def sniff_clients(interface, target_ap):
+def sniff_clients(interface, target_ap, target):
      standardized_MACs = ['ff:ff:ff:ff:ff:ff', '01:80:c2:00:00:00', '01:80:c2:00:00:0e', '01:00:5e', '33:33']
      interrupted = multiprocessing.Value('b', False)
 
@@ -578,9 +578,25 @@ def sniff_clients(interface, target_ap):
                sniff(iface=interface, prn=packet_handler, timeout=8)
           except KeyboardInterrupt:
                interrupted.value = True
+     # Run loading animation while sniff_clients function runs
+     def loading_animation(): 
+          spinner = ['|', '/', '-', '\\']
+          idx = 0
+          try:
+               while True:
+                    sys.stdout.write(f"\r{CYAN}{spinner[idx % len(spinner)]}{RESET} Scanning for {target}'s clients")
+                    sys.stdout.flush()
+                    idx += 1
+                    time.sleep(0.1)
+          except:
+               pass
 
+     # Define processews
      process = multiprocessing.Process(target=sniffing_process, args=(interrupted,))
-     process.start()
+     loading = multiprocessing.Process(target=loading_animation)
+     process.start() 
+     loading.start() # Start of loading animation
+
      try:
           while process.is_alive():
                time.sleep(1)
@@ -588,6 +604,9 @@ def sniff_clients(interface, target_ap):
           interrupted.value = True
           process.terminate()
           process.join()
+
+     loading.terminate() # End loading animation
+     loading.join()
 
      return list(clients), interrupted.value
 def list_clients(sniffed_clients, ssid, bssid):
@@ -638,16 +657,13 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      # Set deauth client if attack mode "Client deauth"
      if deauth_mode == 'client deauth':
           logo()
-          print(f"Sniffing for {target}'s clients...")
-
           while True:
-               # Get available AP's
-               sniffed_clients, interrupted = sniff_clients(interface, bssid) # Get output array from iw
-               # Show the sniff results periodically
+               sniff_result, interrupted = sniff_clients(interface, bssid, target) # Get available AP's
+               if not interrupted:
+                    sniffed_clients = sniff_result # Set sniffed clients list only when the sniff wasn't ended earlier with ctrl + c (only on natural end of each sniff scanning)
                logo()
-               list_clients(sniffed_clients, ssid, bssid) # Show available clients's in table
-               # Break the while cycle when Keyboardinterrupt is caught in the sniff function
-               if interrupted:
+               list_clients(sniffed_clients, ssid, bssid) # Show the sniff results periodically in table
+               if interrupted: # Break the while cycle when Keyboardinterrupt is caught in the sniff function
                     break
 
           # Let user choose client as target
@@ -656,10 +672,6 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                     target_client = choose_target_client(sniffed_clients)
                except:
                     pass
-          # Switch to silent deauth mode when target AP was not set
-          if not target_client:
-               print(f'{YELLOW}No target client set!\n{RESET}')
-               deauth_mode = 'silent'
 
      # Define output dir for handshakes
      output_dir = f"{wifighter_path}/attacks/{target.replace(' ', '_')}"
@@ -721,6 +733,12 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
           print(f'Attacking on {ssid} ({bssid}) with {interface}...')
      else:
           print(f'Attacking on {bssid} with {interface}...')
+
+     # Switch to silent deauth mode when target AP was not set and deauth mode was client deauth
+     if deauth_mode == 'client deauth':
+          if not target_client:
+               print(f'{YELLOW}No target client set!{RESET}')
+               deauth_mode = 'silent'
 
      create_cap_dir(target, output_dir) # Create capture dir if not exist
 
@@ -936,8 +954,7 @@ else:
      # Run attacks
      if attack:
           monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-          #stop_services('verbose') # Make sure interfering services are not running
-          time.sleep(3)
+          #time.sleep(3)
           target = target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID'] # Set target by checking if SSID set
           logo()
           if attack == 'Handshake Crack':
