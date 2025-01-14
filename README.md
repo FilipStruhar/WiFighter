@@ -54,12 +54,17 @@ sudo ./wifighter.py
 
 ## Attacking
 - wps cracking (testing)
-- client jamming, oading animation on jamming
+- client jamming, loading animation on jamming
 
 ## Future visions
 - mazat prazdne/nechycene handshaky z attacks
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
 - vyber vice wordlistu najednou?
+
+## REMEMBER !!
+- create requirements.txt
+- add time.sleep after monitor switch before attacking
+- dependencies a install script
 
 
 ### 1. WPA/WPA2 Handshake Crack
