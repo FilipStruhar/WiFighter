@@ -53,10 +53,10 @@ sudo ./wifighter.py
 - WPS scan?
 
 ## Attacking
-- client sniff timeout and ctrl + c ending
+- client sniff timeout
 - wps cracking
 - client jamming
-- loading animation on jamming
+- loading animation on jamming, client sniffing?
 
 ## Future visions
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
@@ -156,18 +156,6 @@ sudo hashcat -m 22000 <HANDSHAKE>.hccap <WORDLIST>
 git clone https://github.com/ZerBea/hcxtools.git
 cd hcxtools
 ```
-
-
-
-### 3. WPS
-
-**Reaver or Bully ??**
-- Online WPS PIN Brute Force
-
-**Pixie Dust**
-- Offline WPS PIN crack
-- Není to brute force (rychlejší)
-- Využívá slabé kryptografie PINu (né každý router je náchylný)
 
 
 
