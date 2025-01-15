@@ -54,7 +54,8 @@ sudo ./wifighter.py
 
 ## Attacking
 - wps cracking (testing)
-- client jamming, loading animation on jamming
+- reports in csv
+- monitor start --interfaces-- listen --channel-- command
 
 ## Future visions
 - mazat prazdne/nechycene handshaky z attacks
