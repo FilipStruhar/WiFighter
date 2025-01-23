@@ -190,8 +190,11 @@ def monitor_switch(verbose, command, interface, channel):
                os.system(f'ip link set {interface} up 2>&1')
                if channel: 
                     if verbose:
-                         print(f"{CYAN}Setting {interface} to channel {channel}...{RESET}")
-                    os.system(f'iw dev {interface} set channel {channel} 2>&1') # Listen specific channel if provided
+                         print(f"{CYAN}Setting {interface} to listen on channel {channel}...{RESET}")
+                    result = subprocess.run(['iw', 'dev', interface, 'set', 'channel', str(channel)], capture_output=True, text=True)
+                    if result.returncode != 0:  # Check if set channel returned error
+                         print(f"\n\n{RED}Setting network card to channel {channel} returned error!{RESET}")
+
           elif command == "start":
                if verbose:
                     print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...{RESET}')
@@ -218,7 +221,7 @@ def monitor_switch(verbose, command, interface, channel):
 def list_interfaces():
      interfaces_path = '/sys/class/net/'
      print(f"{CYAN}Detected Wi-Fi Interfaces:{RESET}\n")
-    # Iterate over all the interfaces in the directory
+     # Iterate over all the interfaces in the directory
      for interface in os.listdir(interfaces_path):
           # Make sure that the interface is a wireless interface
           if os.path.exists(os.path.join(interfaces_path, interface, 'wireless')):
@@ -932,12 +935,21 @@ if cmd_lenght > 1:
           else:
                print(f'{RED}Invalid Command! Type "wifighter [start/stop/status/list/wake/kill] (-INTERFACE_NAME-)"\n{RESET}')
           
-     elif cmd_lenght == 3:
+     elif cmd_lenght >= 3:
           command = sys.argv[1].lower()
           interface = sys.argv[2]
+          channel = None
+
+          # Handle listen subcommand - set NIC for listenning to specific channel 
+          if cmd_lenght > 3:
+               if sys.argv[3].lower() == 'listen' and cmd_lenght == 5:
+                    channel = sys.argv[4]
+               else:
+                    print(f'{RED}Invalid Command! Type "wifighter start (-INTERFACE_NAME-) listen (-CHANNEL_NUMBER-)"\n{RESET}')
+                    sys.exit()
 
           if command == "start" or command == "stop": # Interface mode switch function
-               monitor_switch('verbose', command, interface, None)
+               monitor_switch('verbose', command, interface, channel)
                print()
           elif command == "status": # Show interface mode status
                mode = interface_mode(interface)
@@ -986,7 +998,7 @@ else:
      # Run attacks
      if attack:
           monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-          #time.sleep(3)
+          time.sleep(1.5)
           target = target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID'] # Set target by checking if SSID set
           logo()
           if attack == 'Handshake Crack':

