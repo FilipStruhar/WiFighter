@@ -49,11 +49,17 @@ sudo ./wifighter.py
 
 --------------------------------------------------------------------
 
-## Bugs & Notes
+## TO DO & BUGS
+- generate report PMKID Attack
+- filenames in PMKID Attack
+- test PMKID Attack
+- MITM Evil Twin
+- 1, 2, 3 network scan results indexing
 - monitor start listen command error still switches the NIC to monitor
 
 ## Future visions
 - choose more wordlists for cracking
+- cracking with hashcat GPU
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
 
 --------------------------------------------------------------------
@@ -167,7 +173,7 @@ hcxpcapngtool -o <OUTPUT_PMKID_HASH_FILE> <CAPTURED_PMKID>
 
 Crack the PMKID
 ```sh
-sudo hashcat -D 1 -a 0 -m 22000 <PMKID_HASH_FILE> <WORDLIST> -o <OUTPUT_FILE>
+sudo hashcat -D 1 -a 0 -m 22000 --potfile-path=/dev/null <PMKID_HASH_FILE> <WORDLIST> -o <OUTPUT_FILE>
 ```
 
 --------------------------------------------------------------------
