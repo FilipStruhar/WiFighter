@@ -39,7 +39,7 @@ interfering_services = ['NetworkManager', 'wpa_supplicant', 'avahi-daemon']
 attack_list = ['Handshake Crack', 'PMKID Attack', 'Jamming', 'Evil Twin']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 jammer_modes = ['Client jamming', 'Broadcast jamming']
-twin_modes = ['MITM/Sniffer', 'Captive_portal']
+twin_modes = ['MITM/Sniffer', 'Captive portal']
 
 wifi_networks = []
 interface = None

@@ -1,6 +1,7 @@
 # WiFighter
 Easy-to-use WiFI pen-testing/scanning tool written in python
 
+--------------------------------------------------------------------
 
 ## Installation 
 
@@ -46,7 +47,7 @@ Run the tool
 sudo ./wifighter.py
 ```
 
-
+--------------------------------------------------------------------
 
 ## Bugs & Notes
 - monitor start listen command error still switches the NIC to monitor
@@ -55,12 +56,13 @@ sudo ./wifighter.py
 - choose more wordlists for cracking
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
 
+--------------------------------------------------------------------
 
 ## REMEMBER !!
 - create requirements.txt
 - dependencies and install script
 
-
+--------------------------------------------------------------------
 
 ### 1. WPA/WPA2 Handshake Crack using aircrack-ng
 
@@ -123,6 +125,7 @@ sudo aircrack-ng <HANDSHAKE>.cap
 sudo aircrack-ng -w <WORDLIST> -b <TARGET_AP_MAC> <HANDSHAKE>.cap
 ```
 
+--------------------------------------------------------------------
 
 ### PMKID Attack
 Compile needed hcxtools & install it's dependencies
@@ -167,8 +170,12 @@ Crack the PMKID
 sudo hashcat -D 1 -a 0 -m 22000 <PMKID_HASH_FILE> <WORDLIST> -o <OUTPUT_FILE>
 ```
 
+--------------------------------------------------------------------
 
 ### Evil Twin
+
+**-MITM/Sniffer- Mode**
+
 Install dependencies
 ```sh
 sudo zypper in hostapd dhcp-server iptables
@@ -177,6 +184,7 @@ sudo zypper in hostapd dhcp-server iptables
 Set dhcp server's listenning interface
 ```sh
 nano /etc/sysconfig/dhcpd 
+```
 ```sh
 DHCPD_INTERFACE="<EVIL_AP_INTERFACE>"
 ```
@@ -247,7 +255,14 @@ systemctl restart dhcpd
 systemctl restart hostapd
 ```
 
+Sniff <EVIL_INTERFACE> traffic using tshark/wireshark/tcpdump...
+<br><br>
 
+**-Captive portal- mode**
+
+
+
+--------------------------------------------------------------------
 
 ### WPS Attack - Reaver
 Dependencies
@@ -260,3 +275,5 @@ pixiewps - GitHub
 ```sh
 libpcap - Repo
 ```
+
+--------------------------------------------------------------------
