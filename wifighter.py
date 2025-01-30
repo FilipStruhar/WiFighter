@@ -95,11 +95,11 @@ def create_dir(path):
 # Determine handshake capture file
 def list_files(directory): 
      return set(os.listdir(directory))
-def cap_file(files_before, files_after, keyword):
+def cap_file(files_before, files_after, keyword, filetype):
      new_files = files_after - files_before
 
      for filename in new_files:
-          if keyword in filename:
+          if keyword in filename and filetype in filename:
                return filename
 
 def generate_report(attack, target_ap, crack, target, output_dir):
@@ -805,7 +805,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
           deauth_clients.join() # Wait for the process to stop
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
-     output_file = cap_file(files_before, files_after, 'handshake') # Determine output_file in which airodump-ng stores
+     output_file = cap_file(files_before, files_after, 'handshake', '.cap') # Determine output_file in which airodump-ng stores
 
      # Wait and verify that handshake was captured successfuly
      captured = False
@@ -815,6 +815,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      while not captured:
           if os.path.exists(f"{output_dir}/{output_file}"):
                try:
+                    print(f'{output_dir}/{output_file}')
                     command = ['sudo', 'aircrack-ng', f'{output_dir}/{output_file}']
                     verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     output = str(verify.communicate())
@@ -924,7 +925,7 @@ def pmkid_attack(target_ap, interface, target):
      time.sleep(2)
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
-     output_file = cap_file(files_before, files_after, 'pmkid_capture') # Determine output_file in which airodump-ng stores
+     output_file = cap_file(files_before, files_after, 'pmkid_capture', '.pcapng') # Determine output_file in which airodump-ng stores
      file_num = output_file.split('-')[1]
      
      # Wait and verify that handshake was captured successfuly

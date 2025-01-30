@@ -256,6 +256,18 @@ systemctl restart hostapd
 ```
 
 Sniff <EVIL_INTERFACE> traffic using tshark/wireshark/tcpdump...
+
+Return back to normal state
+```sh
+systemctl stop dhcpd
+systemctl stop hostapd
+sudo iptables -F
+sudo iptables -t nat -F
+sudo tee | echo 0 > /proc/sys/net/ipv4/ip_forward
+sudo nmcli dev set wlp99s0f3u2 managed yes
+sudo ip addr del 192.168.100.1/24 dev <EVIL_AP_INTERFACE>
+```
+
 <br><br>
 
 **-Captive portal- mode**
