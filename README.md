@@ -1,5 +1,6 @@
 # WiFighter
-Easy-to-use WiFI pen-testing/scanning tool written in python
+Easy-to-use python WiFi pen-testing tool wrapping execution of common WiFi attacks. 
+Utilizing aircrack-ng, hcxtools, hashcat and it's own mechanisms for attacking. 
 
 --------------------------------------------------------------------
 
@@ -50,17 +51,14 @@ sudo ./wifighter.py
 --------------------------------------------------------------------
 
 ## TO DO & BUGS
-- generate report PMKID Attack
-- filenames in PMKID Attack
-- test PMKID Attack
 - MITM Evil Twin
-- 1, 2, 3 network scan results indexing
 - monitor start listen command error still switches the NIC to monitor
 
 ## Future visions
 - choose more wordlists for cracking
 - cracking with hashcat GPU
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
+- device info in reports
 
 --------------------------------------------------------------------
 
