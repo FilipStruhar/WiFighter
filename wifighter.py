@@ -51,7 +51,7 @@ output_dir = None
 output_file= None
 
 # Get the full path of wifighter dir
-wifighter_path = os.path.dirname(os.path.abspath(__file__))
+wifighter_path = os.path.dirname(os.path.realpath(__file__))
 
  #------------------------------------------------------------------------------------
 
@@ -814,7 +814,6 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      while not captured:
           if os.path.exists(f"{output_dir}/{output_file}"):
                try:
-                    print(f'{output_dir}/{output_file}')
                     command = ['sudo', 'aircrack-ng', f'{output_dir}/{output_file}']
                     verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     output = str(verify.communicate())

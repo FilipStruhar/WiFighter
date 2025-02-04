@@ -1,6 +1,6 @@
 # WiFighter
-Easy-to-use python WiFi pen-testing tool wrapping execution of common WiFi attacks. 
-Utilizing aircrack-ng, hcxtools, hashcat and it's own mechanisms for attacking. 
+Easy-to-use python WiFi pen-testing tool for OpenSUSE Tumbleweed.
+Utilizes aircrack-ng, hcxtools, hashcat and it's own mechanisms for executing common attacks. 
 
 --------------------------------------------------------------------
 
@@ -51,6 +51,7 @@ sudo ./wifighter.py
 --------------------------------------------------------------------
 
 ## TO DO & BUGS
+- Make sure script is runned with sudo
 - MITM Evil Twin
 - monitor start listen command error still switches the NIC to monitor
 
