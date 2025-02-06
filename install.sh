@@ -7,7 +7,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 #---------------------------------------------------------------------------------
-# git python3 awk
+# git python3 awk sed
 dependencies=('btop' 'cowsay')
 
 THIS_FILE_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
@@ -124,29 +124,36 @@ if [ -d "venv" ]; then
 fi
 #---------------------------------------------------------------------------------
 
-<<COMMENT
+
 echo -e "\n| WIFIGHTER COMMAND INSTALLATION |"
 
 # Make Python tool script executable
 if [ -e "wifighter.py" ]; then
     chmod +x wifighter.py
 else
-    echo "ERROR Installation script isn't in the same directory as wifighter.py or wifighter doesn't exist!"
+    echo "ERROR Installation script isn't in the same directory as wifighter.py or wifighter.py doesn't exist!"
     exit 1
 fi
 
-# Make link to /usr/local/sbin
-if [ -d "/usr/local/sbin" ] && [ ! -e "/usr/local/sbin/wifighter" ]; then
-    echo "[>] Created symlink in /usr/local/sbin"
-    sudo ln -s ${THIS_FILE_DIR}/wifighter.py /usr/local/sbin/wifighter
+if [ -e "wifighter.py" ] && [ -d "venv" ]; then
+    echo "[>] Setting correct shebang in wifighter.py..."
+    sed -i "1s|^#!.*|#!$THIS_FILE_DIR/venv/bin/python3|" wifighter.py
+else
+    echo "ERROR Installation script isn't in the same directory as wifighter.py/venv or wifighter.py/venv doesn't exist!"
+    exit 1
+fi
+
+# Make link to /usr/sbin
+if [ -d "/usr/sbin" ] && [ ! -e "/usr/sbin/wifighter" ]; then
+    sudo ln -s ${THIS_FILE_DIR}/wifighter.py /usr/sbin/wifighter
+    echo "[>] Created symlink in /usr/sbin"
 fi
 
 # Verify installation
-if [ -x "/usr/local/sbin/wifighter" ]; then
+if [ -x "/usr/sbin/wifighter" ]; then
     echo -e "\nInstallation complete. You can verify it by executing 'wifighter -h'"
     exit 0
 else
     echo -e "\nERROR Installation failed!"
     exit 1
 fi
-COMMENT
