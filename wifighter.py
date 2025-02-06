@@ -230,54 +230,66 @@ def monitor_switch(verbose, command, interface, channel):
 
 
 def list_interfaces():
-     interfaces_path = '/sys/class/net/'
-     print(f"{CYAN}Detected Wi-Fi Interfaces:{RESET}\n")
-     # Iterate over all the interfaces in the directory
-     for interface in os.listdir(interfaces_path):
-          # Make sure that the interface is a wireless interface
-          if os.path.exists(os.path.join(interfaces_path, interface, 'wireless')):
-               print(f"{CYAN}{interface}{RESET}")
+     detected_interfaces = []
 
+     # Get wireless interfaces array
+     try:
+        # Run 'iw dev' to get wireless interface details
+        result = subprocess.run(["iw", "dev"], capture_output=True, text=True, check=True)
+
+        # Find all interface names using regex
+        detected_interfaces = re.findall(r'Interface\s+(\S+)', result.stdout)
+     except:
+          pass
+
+     if detected_interfaces:
+          for interface in detected_interfaces:
+               print(f"{CYAN}{interface}{RESET}")
 #---------------------------------
 
  # | CHOOSING | #
 
 def choose_interface():
-     interfaces_path = '/sys/class/net/'
      detected_interfaces = []
 
-    # Iterate over all the interfaces in the directory
-     for interface in os.listdir(interfaces_path):
-          # Make sure that the interface is a wireless interface
-          if os.path.exists(os.path.join(interfaces_path, interface, 'wireless')):
-               detected_interfaces.append(interface)
-
-     idx = 1
-     # Show detected interfaces
-     print(f"{CYAN}| Select Interface |{RESET}\n")
-
-     for interface in detected_interfaces:
-          print(f"{idx}. {interface}")
-          idx += 1
-
+     # Get wireless interfaces array
      try:
-          while True:     
-               try:
-                    # Prompt the user to choose an interface by number
-                    choice = int(input(f"\nInterface number: ")) - 1
-               except ValueError:
-                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
-                    continue
-               
-               # Check if the choice is in range
-               if 0 <= choice < len(detected_interfaces):
-                    # Return chosen interface
-                    interface = detected_interfaces[choice]
-                    return interface
-               else:
-                    print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
-     except KeyboardInterrupt:
+        # Run 'iw dev' to get wireless interface details
+        result = subprocess.run(["iw", "dev"], capture_output=True, text=True, check=True)
+
+        # Find all interface names using regex
+        detected_interfaces = re.findall(r'Interface\s+(\S+)', result.stdout)
+     except:
           pass
+     
+
+     if detected_interfaces:
+          idx = 1
+          # Show detected interfaces
+          print(f"{CYAN}| Select Interface |{RESET}\n")
+
+          for interface in detected_interfaces:
+               print(f"{idx}. {interface}")
+               idx += 1
+
+          try:
+               while True:     
+                    try:
+                         # Prompt the user to choose an interface by number
+                         choice = int(input(f"\nInterface number: ")) - 1
+                    except ValueError:
+                         print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+                         continue
+                    
+                    # Check if the choice is in range
+                    if 0 <= choice < len(detected_interfaces):
+                         # Return chosen interface
+                         interface = detected_interfaces[choice]
+                         return interface
+                    else:
+                         print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+          except KeyboardInterrupt:
+               pass
 
 def choose_target():
      global wifi_networks
