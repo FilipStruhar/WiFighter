@@ -8,7 +8,7 @@ fi
 
 #---------------------------------------------------------------------------------
 # git python3 awk sed
-dependencies=('awk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python3' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcpd' 'iptables')
+dependencies=('awk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python3' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcp-server' 'iptables')
 
 THIS_FILE_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
@@ -87,21 +87,26 @@ if [ ${#to_install[@]} -gt 0 ]; then
         echo -e "\n| PACKAGE DEPENDENCY INSTALL |"
         # Loop through and install missing hcxtools
         for package in "${to_install[@]}"; do
-            sudo zypper in gcc libopenssl3 libopenssl-devel libz1 libz-devel libcurl4 libcurl-devel pkgconf-pkg-config  # Install hcxtools dependencies
+            # Install hcxtools dependencies
+            sudo zypper in gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config
             if [[ "$package" == 'hcxpcapngtool' ]]; then
                 echo "Installing tool hcxpcapngtool"
-                git clone https://github.com/ZerBea/hcxtools.git  # Pull git repo
+                git clone https://github.com/ZerBea/hcxtools.git
                 cd hcxtools
-                sudo make install  # Compile the tool
+                # Compile the tool
+                sudo make -j $(nproc)
+                sudo make install
             elif [[ "$package" == 'hcxdumptool' ]]; then
                 echo "Installing tool hcxdumptool"
-                git clone https://github.com/ZerBea/hcxdumptool.git  # Pull git repo # Install version 6.2.6
+                git clone https://github.com/ZerBea/hcxdumptool.git
                 cd hcxdumptool
-                sudo make install  # Compile the tool
+                # Compile the tool
+                sudo make -j $(nproc)
+                sudo make install
             fi
         done
     else
-        echo "Installation aborted!"
+        echo "ERROR Installation aborted!"
         exit 1
     fi
 else

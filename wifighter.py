@@ -244,6 +244,8 @@ def list_interfaces():
      if detected_interfaces:
           for interface in detected_interfaces:
                print(f"{CYAN}{interface}{RESET}")
+     else:
+          print(f'{RED}No wireless interfaces found!{RESET}')
 #---------------------------------
 
  # | CHOOSING | #
@@ -289,6 +291,8 @@ def choose_interface():
                          print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
           except KeyboardInterrupt:
                pass
+     else:
+          print(f'{RED}No wireless interfaces found!{RESET}')
 
 def choose_target():
      global wifi_networks
@@ -1219,6 +1223,11 @@ rsn_pairwise=CCMP
 
 
 # | CODE | #
+
+# Make sure script is run as root
+if os.geteuid() != 0:
+    print(f"{RED}The tool needs to be run as root. Please re-run it with sudo!\n{RESET}")
+    sys.exit()
 
 cmd_lenght = len(sys.argv)
 

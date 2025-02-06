@@ -6,11 +6,6 @@ Utilizes aircrack-ng, hcxtools, hashcat and it's own mechanisms for executing co
 
 ## Installation 
 
-**Dependencies**
-```sh
-sudo zypper in awk sed iputils iproute2 iw git python3 aircrack-ng hashcat pocl hostapd dhcpd iptables
-```
-
 **Creating python virtual enviroment**
 
 Clone the project
@@ -41,6 +36,7 @@ sudo wifighter
 --------------------------------------------------------------------
 
 ## TO DO & BUGS
+- print error if no network card found
 - Make sure script is runned with sudo
 - MITM Evil Twin
 
