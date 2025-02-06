@@ -8,7 +8,7 @@ Utilizes aircrack-ng, hcxtools, hashcat and it's own mechanisms for executing co
 
 **Dependencies**
 ```sh
-sudo zypper in python3 aircrack-ng ...
+sudo zypper in awk sed iputils iproute2 iw git python3 aircrack-ng hashcat pocl hostapd dhcpd iptables
 ```
 
 **Creating python virtual enviroment**
@@ -23,29 +23,19 @@ Enter the project folder
 cd WiFighter
 ```
 
-Create virtual enviroment
+Make the install script executable
 ```sh
-python3 -m venv venv
+sudo chmod +x install.sh
 ```
 
-Enter the virtual enviroment
+Run install script
 ```sh
-source venv/bin/activate
-```
-
-Install python modules (prettytable, psutil, scapy) 
-```sh
-pip3 install -r requirements.txt
-```
-
-Exit from virtual enviroment
-```sh
-deactivate
+sudo ./install.sh
 ```
 
 Run the tool
 ```sh
-sudo ./wifighter.py
+sudo wifighter
 ```
 
 --------------------------------------------------------------------
@@ -53,19 +43,13 @@ sudo ./wifighter.py
 ## TO DO & BUGS
 - Make sure script is runned with sudo
 - MITM Evil Twin
-- monitor start listen command error still switches the NIC to monitor
 
 ## Future visions
 - choose more wordlists for cracking
 - cracking with hashcat GPU
 - Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
 - device info in reports
-
---------------------------------------------------------------------
-
-## REMEMBER !!
-- create requirements.txt
-- dependencies and install script
+- monitor start listen command error still switches the NIC to monitor
 
 --------------------------------------------------------------------
 

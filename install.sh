@@ -8,7 +8,7 @@ fi
 
 #---------------------------------------------------------------------------------
 # git python3 awk sed
-dependencies=('btop' 'cowsay')
+dependencies=('awk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python3' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcpd' 'iptables')
 
 THIS_FILE_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
