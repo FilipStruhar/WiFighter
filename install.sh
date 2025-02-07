@@ -142,8 +142,8 @@ fi
 
 echo -e "\n| PYTHON3 & VENV SETUP |"
 
+ # Create python virtual enviroment
 if [ ! -d "$THIS_FILE_DIR/venv" ]; then
-    # Create python virtual enviroment
     if python3 -m venv "$THIS_FILE_DIR/venv" &>/dev/null; then
         echo "[>] Created python virtual enviroment called \"venv\""
     else
@@ -151,9 +151,10 @@ if [ ! -d "$THIS_FILE_DIR/venv" ]; then
         exit 1
     fi
 fi
+
+# Install needed python modules in virtual enviroment
 if [ -d "$THIS_FILE_DIR/venv" ]; then
-    # Install needed python modules in virtual enviroment
-    source venv/bin/activate
+    source "$THIS_FILE_DIR/venv/bin/activate"
     pip3 install --upgrade pip &>/dev/null
     if pip3 install prettytable psutil scapy &>/dev/null; then
         echo "[>] Installed python modules -> prettytable psutil scapy"
@@ -183,6 +184,7 @@ else
     exit 1
 fi
 
+# Set correct shebang in wifighter.py
 if [ -f "$THIS_FILE_DIR/wifighter.py" ] && [ -d "$THIS_FILE_DIR/venv" ]; then
     if sed -i "1s|^#!.*|#!$THIS_FILE_DIR/venv/bin/python3|" "$THIS_FILE_DIR/wifighter.py" &>/dev/null; then
         echo "[>] Set correct shebang in wifighter.py"
