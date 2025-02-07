@@ -38,7 +38,8 @@ if [ ${#to_install[@]} -gt 0 ]; then
         echo -e "\n| PACKAGE DEPENDENCY INSTALL |"
         # Loop through and install missing packages
         for package in "${to_install[@]}"; do
-            if zypper install -y "$package" &>/dev/null; then
+            zypper install -y "$package" &>/dev/null
+            if zypper search --installed-only "$package" &>/dev/null; then
                 echo "[>] Package \"$package\" installed successfully"
             else
                 echo "ERROR Installing package \"$package\" failed!"
@@ -88,21 +89,30 @@ if [ ${#to_install[@]} -gt 0 ]; then
         # Loop through and install missing hcxtools
         for package in "${to_install[@]}"; do
             # Install hcxtools dependencies
-            sudo zypper in gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config
+            zypper in gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config
             if [[ "$package" == 'hcxpcapngtool' ]]; then
                 echo "Installing tool hcxpcapngtool"
                 git clone https://github.com/ZerBea/hcxtools.git
                 cd hcxtools
                 # Compile the tool
-                sudo make -j $(nproc)
-                sudo make install
+                make -j $(nproc)
+                make install
+                if hcxtools --version &>/dev/null; then
+                    echo "[>] Package \"hcxtools\" installed successfully"
+                else
+                    echo "ERROR Installing package \"hcxtools\" failed!"
+                fi
             elif [[ "$package" == 'hcxdumptool' ]]; then
-                echo "Installing tool hcxdumptool"
                 git clone https://github.com/ZerBea/hcxdumptool.git
                 cd hcxdumptool
                 # Compile the tool
-                sudo make -j $(nproc)
-                sudo make install
+                make -j $(nproc)
+                make install
+                if hcxdumptool --version &>/dev/null; then
+                    echo "[>] Package \"hcxdumptool\" installed successfully"
+                else
+                    echo "ERROR Installing package \"hcxdumptool\" failed!"
+                fi
             fi
         done
     else
@@ -150,7 +160,7 @@ fi
 
 # Make link to /usr/sbin
 if [ -d "/usr/sbin" ] && [ ! -e "/usr/sbin/wifighter" ]; then
-    sudo ln -s ${THIS_FILE_DIR}/wifighter.py /usr/sbin/wifighter
+    ln -s ${THIS_FILE_DIR}/wifighter.py /usr/sbin/wifighter
     echo "[>] Created symlink in /usr/sbin"
 fi
 

@@ -36,8 +36,8 @@ sudo wifighter
 --------------------------------------------------------------------
 
 ## TO DO & BUGS
-- print error if no network card found
-- Make sure script is runned with sudo
+- installed script shebang clause error and venv on first install.sh run
+- add verify after install of dependant packages and tools in install.sh
 - MITM Evil Twin
 
 ## Future visions
