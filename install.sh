@@ -99,12 +99,14 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 make -j $(nproc) &>/dev/null
                 make install &>/dev/null
                 if hcxpcapngtool --version &>/dev/null; then
-                    echo "[>] Package \"hcxtools\" installed successfully"
+                    echo "[>] Package \"hcxpcapngtool\" installed successfully"
                 else
-                    echo "ERROR Installing package \"hcxtools\" failed!"
+                    echo "ERROR Installing package \"hcxpcapngtool\" failed!"
                 fi
+                cd ..
                 rm -r hcxtools
             elif [[ "$package" == 'hcxdumptool' ]]; then
+            echo "Installing tool hcxdumptool"
                 git clone https://github.com/ZerBea/hcxdumptool.git &>/dev/null
                 cd hcxdumptool
                 # Compile the tool
@@ -115,6 +117,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 else
                     echo "ERROR Installing package \"hcxdumptool\" failed!"
                 fi
+                cd ..
                 rm -r hcxdumptool
             fi
         done
@@ -130,6 +133,8 @@ fi
 #---------------------------------------------------------------------------------
 
 echo -e "\n| PYTHON3 & VENV SETUP |"
+
+pwd
 
 if [ ! -d "$THIS_FILE_DIR/venv" ]; then
     python3 -m venv venv  # Create python virtual enviroment
