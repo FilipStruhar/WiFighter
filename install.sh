@@ -90,9 +90,16 @@ if [ ${#to_install[@]} -gt 0 ]; then
         # Loop through and install missing hcxtools
         for package in "${to_install[@]}"; do
             # Install hcxtools dependencies
-            zypper in -y gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config &>/dev/null
+            echo "Installing dependencies..."
+            if zypper in -y gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config &>/dev/null; then
+                echo "[>] Dependencies installed successfully"
+            else
+                echo "ERROR Installing dependencies!"
+                exit 1
+            fi
+            
             if [[ "$package" == 'hcxpcapngtool' ]]; then
-                echo "Installing tool hcxpcapngtool"
+                echo "Installing tool \"hcxpcapngtool\"..."
                 git clone https://github.com/ZerBea/hcxtools.git &>/dev/null
                 cd hcxtools
                 # Compile the tool
@@ -102,11 +109,12 @@ if [ ${#to_install[@]} -gt 0 ]; then
                     echo "[>] Package \"hcxpcapngtool\" installed successfully"
                 else
                     echo "ERROR Installing package \"hcxpcapngtool\" failed!"
+                    exit 1
                 fi
                 cd ..
                 rm -r hcxtools
             elif [[ "$package" == 'hcxdumptool' ]]; then
-            echo "Installing tool hcxdumptool"
+            echo "Installing tool \"hcxdumptool\"..."
                 git clone https://github.com/ZerBea/hcxdumptool.git &>/dev/null
                 cd hcxdumptool
                 # Compile the tool
@@ -116,6 +124,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                     echo "[>] Package \"hcxdumptool\" installed successfully"
                 else
                     echo "ERROR Installing package \"hcxdumptool\" failed!"
+                    exit 1
                 fi
                 cd ..
                 rm -r hcxdumptool
@@ -134,17 +143,25 @@ fi
 
 echo -e "\n| PYTHON3 & VENV SETUP |"
 
-pwd
-
 if [ ! -d "$THIS_FILE_DIR/venv" ]; then
-    python3 -m venv venv  # Create python virtual enviroment
-    sleep 3
-    echo "[>] Created python virtual enviroment called \"venv\""
+    # Create python virtual enviroment
+    if python3 -m venv "$THIS_FILE_DIR/venv" &>/dev/null; then
+        echo "[>] Created python virtual enviroment called \"venv\""
+    else
+        echo "ERROR Creating virtual enviroment!"
+        exit 1
+    fi
 fi
 if [ -d "$THIS_FILE_DIR/venv" ]; then
+    # Install needed python modules in virtual enviroment
     source venv/bin/activate
-    pip3 install --upgrade pip
-    pip3 install prettytable psutil scapy  # Install needed python modules in virtual enviroment
+    pip3 install --upgrade pip &>/dev/null
+    if pip3 install prettytable psutil scapy &>/dev/null\; then
+        echo "[>] Installed python modules -> prettytable psutil scapy"
+    else
+        echo "ERROR Installing python modules!"
+        exit 1
+    fi
     deactivate
 fi
 #---------------------------------------------------------------------------------
@@ -152,28 +169,41 @@ fi
 
 echo -e "\n| WIFIGHTER COMMAND INSTALLATION |"
 
-pwd
-
 # Make Python tool script executable
-if [ -e "$THIS_FILE_DIR/wifighter.py" ]; then
-    chmod +x wifighter.py
+if [ -f "$THIS_FILE_DIR/wifighter.py" ]; then
+    if [ ! -x "$THIS_FILE_DIR/wifighter.py" ]; then
+        if chmod +x "$THIS_FILE_DIR/wifighter.py" &>/dev/null; then
+            echo "[>] Put execute permissions on wifighter.py"
+        else
+            echo "ERROR Making wifighter.py executable!"
+            exit 1
+        fi
+    fi
 else
     echo "ERROR Installation script isn't in the same directory as wifighter.py or wifighter.py doesn't exist!"
     exit 1
 fi
 
-if [ -e "$THIS_FILE_DIR/wifighter.py" ] && [ -d "$THIS_FILE_DIR/venv" ]; then
-    echo "[>] Setting correct shebang in wifighter.py..."
-    sed -i "1s|^#!.*|#!$THIS_FILE_DIR/venv/bin/python3|" wifighter.py
+if [ -f "$THIS_FILE_DIR/wifighter.py" ] && [ -d "$THIS_FILE_DIR/venv" ]; then
+    if sed -i "1s|^#!.*|#!$THIS_FILE_DIR/venv/bin/python3|" "$THIS_FILE_DIR/wifighter.py" &>/dev/null; then
+        echo "[>] Set correct shebang in wifighter.py"
+    else
+        echo "ERROR Setting correct shebang in wifighter.py!"
+        exit 1
+    fi
 else
     echo "ERROR Installation script isn't in the same directory as wifighter.py/venv or wifighter.py/venv doesn't exist!"
     exit 1
 fi
 
 # Make link to /usr/sbin
-if [ -d "/usr/sbin" ] && [ ! -e "/usr/sbin/wifighter" ]; then
-    ln -s ${THIS_FILE_DIR}/wifighter.py /usr/sbin/wifighter
-    echo "[>] Created symlink in /usr/sbin"
+if [ -d "/usr/sbin" ] && [ ! -f "/usr/sbin/wifighter" ]; then
+    if ln -s ${THIS_FILE_DIR}/wifighter.py /usr/sbin/wifighter &>/dev/null; then
+        echo "[>] Created symlink in /usr/sbin"
+    else
+        echo "ERROR Creating symlink in /usr/sbin"
+        exit 1
+    fi
 fi
 
 # Verify installation
