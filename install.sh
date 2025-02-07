@@ -33,7 +33,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
     done
     echo ""
     # Ask the user if they want to install the missing dependencies
-    read -p "Do you wish to install these packages with \"zypper in -y\"? (y/n): " choice
+    read -p "Do you wish to install these packages with \"zypper in -y\"? (y/N): " choice
     if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
         echo -e "\n| PACKAGE DEPENDENCY INSTALL |"
         # Loop through and install missing packages
@@ -84,7 +84,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
     echo ""
     echo -e "[>] Dependencies -> gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config\n"
     # Ask the user if they want to install the missing dependencies
-    read -p "Do you wish to install (github clone & compile) these hcxtools with all it's dependencies? (y/n): " choice
+    read -p "Do you wish to install (github clone & compile) these hcxtools with all it's dependencies? (y/N): " choice
     if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
         echo -e "\n| HCXTOOLS DEPENDENCY INSTALL |"
         # Install hcxtools dependencies
