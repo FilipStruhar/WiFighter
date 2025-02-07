@@ -152,6 +152,8 @@ fi
 
 echo -e "\n| WIFIGHTER COMMAND INSTALLATION |"
 
+pwd
+
 # Make Python tool script executable
 if [ -e "$THIS_FILE_DIR/wifighter.py" ]; then
     chmod +x wifighter.py
