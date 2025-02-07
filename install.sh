@@ -77,12 +77,12 @@ done
 
 # If there are missing hcxtools, prompt the user to install them
 if [ ${#to_install[@]} -gt 0 ]; then
-    echo -e "\nThe following hcxtools are missing and need to be installed:"
+    echo -e "\nThe following hcxtools are missing and need to be installed along with it's dependencies:"
     for pkg in "${to_install[@]}"; do
         echo "[>] $pkg"
     done
     echo ""
-    echo -e "Dependencies: gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config\n"
+    echo -e "[>] Dependencies -> gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config\n"
     # Ask the user if they want to install the missing dependencies
     read -p "Do you wish to install (github clone & compile) these hcxtools with all it's dependencies? (y/n): " choice
     if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
@@ -98,7 +98,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 # Compile the tool
                 make -j $(nproc) &>/dev/null
                 make install &>/dev/null
-                if hcxtools --version &>/dev/null; then
+                if hcxpcapngtool --version &>/dev/null; then
                     echo "[>] Package \"hcxtools\" installed successfully"
                 else
                     echo "ERROR Installing package \"hcxtools\" failed!"
@@ -131,11 +131,12 @@ fi
 
 echo -e "\n| PYTHON3 & VENV SETUP |"
 
-if [ ! -d "venv" ]; then
+if [ ! -d "$THIS_FILE_DIR/venv" ]; then
     python3 -m venv venv  # Create python virtual enviroment
+    sleep 3
     echo "[>] Created python virtual enviroment called \"venv\""
 fi
-if [ -d "venv" ]; then
+if [ -d "$THIS_FILE_DIR/venv" ]; then
     source venv/bin/activate
     pip3 install --upgrade pip
     pip3 install prettytable psutil scapy  # Install needed python modules in virtual enviroment
@@ -147,14 +148,14 @@ fi
 echo -e "\n| WIFIGHTER COMMAND INSTALLATION |"
 
 # Make Python tool script executable
-if [ -f "wifighter.py" ]; then
+if [ -e "$THIS_FILE_DIR/wifighter.py" ]; then
     chmod +x wifighter.py
 else
     echo "ERROR Installation script isn't in the same directory as wifighter.py or wifighter.py doesn't exist!"
     exit 1
 fi
 
-if [ -f "wifighter.py" ] && [ -d "venv" ]; then
+if [ -e "$THIS_FILE_DIR/wifighter.py" ] && [ -d "$THIS_FILE_DIR/venv" ]; then
     echo "[>] Setting correct shebang in wifighter.py..."
     sed -i "1s|^#!.*|#!$THIS_FILE_DIR/venv/bin/python3|" wifighter.py
 else
