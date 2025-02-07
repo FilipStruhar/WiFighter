@@ -70,7 +70,7 @@ for tool in "${github_dependencies[@]}"; do
         installed_version=$(hcxdumptool --version | awk '{print $2}')
         if [[ ! "$installed_version" == "6.2.6" ]]; then
             echo "[>] Tool \"hcxdumptool\" needs version 6.2.6. - will be treated as not installed!"
-            o_install+=("$tool")
+            to_install+=("$tool")
         fi
     fi
 done
@@ -82,6 +82,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
         echo "[>] $pkg"
     done
     echo ""
+    echo -e "Dependencies: gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config\n"
     # Ask the user if they want to install the missing dependencies
     read -p "Do you wish to install (github clone & compile) these hcxtools with all it's dependencies? (y/n): " choice
     if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
@@ -89,30 +90,32 @@ if [ ${#to_install[@]} -gt 0 ]; then
         # Loop through and install missing hcxtools
         for package in "${to_install[@]}"; do
             # Install hcxtools dependencies
-            zypper in gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config
+            zypper in -y gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config &>/dev/null
             if [[ "$package" == 'hcxpcapngtool' ]]; then
                 echo "Installing tool hcxpcapngtool"
-                git clone https://github.com/ZerBea/hcxtools.git
+                git clone https://github.com/ZerBea/hcxtools.git &>/dev/null
                 cd hcxtools
                 # Compile the tool
-                make -j $(nproc)
-                make install
+                make -j $(nproc) &>/dev/null
+                make install &>/dev/null
                 if hcxtools --version &>/dev/null; then
                     echo "[>] Package \"hcxtools\" installed successfully"
                 else
                     echo "ERROR Installing package \"hcxtools\" failed!"
                 fi
+                rm -r hcxtools
             elif [[ "$package" == 'hcxdumptool' ]]; then
-                git clone https://github.com/ZerBea/hcxdumptool.git
+                git clone https://github.com/ZerBea/hcxdumptool.git &>/dev/null
                 cd hcxdumptool
                 # Compile the tool
-                make -j $(nproc)
-                make install
+                make -j $(nproc) &>/dev/null
+                make install &>/dev/null
                 if hcxdumptool --version &>/dev/null; then
                     echo "[>] Package \"hcxdumptool\" installed successfully"
                 else
                     echo "ERROR Installing package \"hcxdumptool\" failed!"
                 fi
+                rm -r hcxdumptool
             fi
         done
     else
@@ -134,6 +137,7 @@ if [ ! -d "venv" ]; then
 fi
 if [ -d "venv" ]; then
     source venv/bin/activate
+    pip3 install --upgrade pip
     pip3 install prettytable psutil scapy  # Install needed python modules in virtual enviroment
     deactivate
 fi
@@ -143,14 +147,14 @@ fi
 echo -e "\n| WIFIGHTER COMMAND INSTALLATION |"
 
 # Make Python tool script executable
-if [ -e "wifighter.py" ]; then
+if [ -f "wifighter.py" ]; then
     chmod +x wifighter.py
 else
     echo "ERROR Installation script isn't in the same directory as wifighter.py or wifighter.py doesn't exist!"
     exit 1
 fi
 
-if [ -e "wifighter.py" ] && [ -d "venv" ]; then
+if [ -f "wifighter.py" ] && [ -d "venv" ]; then
     echo "[>] Setting correct shebang in wifighter.py..."
     sed -i "1s|^#!.*|#!$THIS_FILE_DIR/venv/bin/python3|" wifighter.py
 else
