@@ -86,18 +86,17 @@ if [ ${#to_install[@]} -gt 0 ]; then
     # Ask the user if they want to install the missing dependencies
     read -p "Do you wish to install (github clone & compile) these hcxtools with all it's dependencies? (y/n): " choice
     if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
-        echo -e "\n| PACKAGE DEPENDENCY INSTALL |"
+        echo -e "\n| HCXTOOLS DEPENDENCY INSTALL |"
+        # Install hcxtools dependencies
+        echo "Installing dependencies..."
+        if zypper in -y gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config &>/dev/null; then
+            echo "[>] Dependencies installed successfully"
+        else
+            echo "ERROR Installing dependencies!"
+            exit 1
+        fi
         # Loop through and install missing hcxtools
-        for package in "${to_install[@]}"; do
-            # Install hcxtools dependencies
-            echo "Installing dependencies..."
-            if zypper in -y gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config &>/dev/null; then
-                echo "[>] Dependencies installed successfully"
-            else
-                echo "ERROR Installing dependencies!"
-                exit 1
-            fi
-            
+        for package in "${to_install[@]}"; do    
             if [[ "$package" == 'hcxpcapngtool' ]]; then
                 echo "Installing tool \"hcxpcapngtool\"..."
                 git clone https://github.com/ZerBea/hcxtools.git &>/dev/null
@@ -156,7 +155,7 @@ if [ -d "$THIS_FILE_DIR/venv" ]; then
     # Install needed python modules in virtual enviroment
     source venv/bin/activate
     pip3 install --upgrade pip &>/dev/null
-    if pip3 install prettytable psutil scapy &>/dev/null\; then
+    if pip3 install prettytable psutil scapy &>/dev/null; then
         echo "[>] Installed python modules -> prettytable psutil scapy"
     else
         echo "ERROR Installing python modules!"
