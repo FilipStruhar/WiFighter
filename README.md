@@ -36,9 +36,9 @@ sudo wifighter
 --------------------------------------------------------------------
 
 ## TO DO & BUGS
-- installed script shebang clause error and venv on first install.sh run
-- add verify after install of dependant packages and tools in install.sh
-- MITM Evil Twin
+- install script hcxdumptool correct version
+- make sure configurations restore after evil twin
+- deauth original AP in Evil Twin
 
 ## Future visions
 - choose more wordlists for cracking
@@ -200,17 +200,12 @@ interface=<EVIL_AP_INTERFACE>
 driver=nl80211
 
 ssid=<SSID>
-channel=1
+channel=<CHANNEL>
 
 hw_mode=g
 ieee80211n=1
 wme_enabled=1
 macaddr_acl=0
-auth_algs=1
-wpa=2
-wpa_key_mgmt=WPA-PSK
-wpa_passphrase=<PASSWORD>
-rsn_pairwise=CCMP
 ```
 
 Configure evil AP's interface
@@ -249,13 +244,10 @@ systemctl stop hostapd
 sudo iptables -F
 sudo iptables -t nat -F
 sudo tee | echo 0 > /proc/sys/net/ipv4/ip_forward
-sudo nmcli dev set wlp99s0f3u2 managed yes
+sudo nmcli dev set <EVIL_AP_INTERFACE> managed yes
 sudo ip addr del 192.168.100.1/24 dev <EVIL_AP_INTERFACE>
+sudo systemctl restart NetworkManager
 ```
-
-<br><br>
-
-**-Captive portal- mode**
 
 
 
