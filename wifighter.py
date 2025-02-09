@@ -2,7 +2,7 @@
 
 # | IMPORT | #
 
-import os, sys, subprocess, time, re, multiprocessing, psutil, textwrap
+import os, sys, subprocess, time, re, multiprocessing, psutil, textwrap, signal
 from multiprocessing import Process, Manager
 from prettytable import PrettyTable 
 from scapy.all import *
@@ -1091,6 +1091,11 @@ def jam_network(target_ap, interface, jammer_mode):
 
      logo()
      print(f'{CYAN}| Jamming |{RESET}\n')
+
+     if target_ap['Encryption'] == 'WPA3':
+          print(f"\n{YELLOW}!! WPA3 protected networks aren't vulnerable to this type of attack !! Skipping...{RESET}")
+          return
+
      # Run aireplay-ng
      deauth_clients.start()
      deauth_clients.join()
@@ -1281,8 +1286,10 @@ macaddr_acl=0
                # Run the Evil Twin AP
                run_command("sudo hostapd /etc/hostapd.conf")
                
+               signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
+
                # Restore everything
-               print(f'\n{CYAN}[>]{RESET} Restoring configurations')
+               print(f'\n{CYAN}[>]{RESET} Restoring interfaces and network configuration')
                run_command("sudo systemctl stop dhcpd")
                run_command("sudo iptables -F")
                run_command("sudo iptables -t nat -F")
@@ -1291,6 +1298,7 @@ macaddr_acl=0
                run_command(f"sudo ip addr del 192.168.100.1/24 dev {evil_interface}")
                run_command("sudo systemctl restart NetworkManager")
 
+               signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
      else:
           print(f"{RED}\nTarget AP doesn't have SSID set!{RESET}")
 
@@ -1393,8 +1401,11 @@ else:
                deauth_mode = choose_deauth_mode()
                if deauth_mode:
                     try:
+                         signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                          monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
+                         stop_services(None)
                          time.sleep(2)
+                         signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                     except KeyboardInterrupt:
                          pass
                     try:
@@ -1406,8 +1417,11 @@ else:
 
           elif attack == 'PMKID Attack':
                try:
+                    signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                     monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
+                    stop_services(None)
                     time.sleep(2)
+                    signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                except KeyboardInterrupt:
                     pass
                try:
@@ -1432,8 +1446,11 @@ else:
                jammer_mode = choose_jammer_mode()
                if jammer_mode:
                     try:
+                         signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                          monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
+                         stop_services(None)
                          time.sleep(2)
+                         signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                     except KeyboardInterrupt:
                          pass
                     try:
@@ -1443,8 +1460,11 @@ else:
 
           elif attack == 'Evil Twin':
                try:
+                    signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                     monitor_switch('verbose', 'stop', interface, None)
+                    start_services(None)
                     time.sleep(2)
+                    signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                except:
                     pass
                try:
@@ -1457,7 +1477,8 @@ else:
      print(f"\n\n{BLUE}Exiting the tool...{RESET}")
      if interface:
           try:
+               signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                monitor_switch('verbose', 'stop', interface, None)
+               signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
           except:
                pass
-     

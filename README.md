@@ -36,7 +36,6 @@ sudo wifighter
 --------------------------------------------------------------------
 
 ## TO DO & BUGS
-- install script hcxdumptool correct version
 - make sure configurations restore after evil twin
 - deauth original AP in Evil Twin
 

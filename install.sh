@@ -58,7 +58,7 @@ sleep 2
 
 github_dependencies=('hcxpcapngtool' 'hcxdumptool')
 
-echo -e "\n| HCXTOOLS DEPENDENCY CHECK |"
+echo -e "\n\n| HCXTOOLS DEPENDENCY CHECK |"
 
 to_install=()
 
@@ -142,7 +142,7 @@ fi
 #---------------------------------------------------------------------------------
 sleep 2
 
-echo -e "\n| PYTHON3 & VENV SETUP |"
+echo -e "\n\n| PYTHON3 & VENV SETUP |"
 
  # Create python virtual enviroment
 if [ ! -d "$THIS_FILE_DIR/venv" ]; then
@@ -169,7 +169,7 @@ fi
 #---------------------------------------------------------------------------------
 sleep 2
 
-echo -e "\n| WIFIGHTER COMMAND INSTALLATION |"
+echo -e "\n\n| WIFIGHTER COMMAND INSTALLATION |"
 
 # Make Python tool script executable
 if [ -f "$THIS_FILE_DIR/wifighter.py" ]; then
