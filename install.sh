@@ -54,6 +54,7 @@ else
 fi
 
 #---------------------------------------------------------------------------------
+sleep 2
 
 github_dependencies=('hcxpcapngtool' 'hcxdumptool')
 
@@ -139,6 +140,7 @@ fi
 
 
 #---------------------------------------------------------------------------------
+sleep 2
 
 echo -e "\n| PYTHON3 & VENV SETUP |"
 
@@ -165,7 +167,7 @@ if [ -d "$THIS_FILE_DIR/venv" ]; then
     deactivate
 fi
 #---------------------------------------------------------------------------------
-
+sleep 2
 
 echo -e "\n| WIFIGHTER COMMAND INSTALLATION |"
 
