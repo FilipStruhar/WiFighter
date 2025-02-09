@@ -114,7 +114,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 rm -r hcxtools
             elif [[ "$package" == 'hcxdumptool' ]]; then
             echo "Installing tool \"hcxdumptool\"..."
-                git clone https://github.com/ZerBea/hcxdumptool.git &>/dev/null
+                git clone --branch 6.2.6 --depth 1 https://github.com/ZerBea/hcxdumptool.git &>/dev/null
                 cd hcxdumptool
                 # Compile the tool
                 make -j $(nproc) &>/dev/null
