@@ -38,6 +38,7 @@ interfering_services = ['NetworkManager', 'wpa_supplicant', 'avahi-daemon']
 attack_list = ['Handshake Crack', 'PMKID Attack', 'Jamming', 'Evil Twin']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 jammer_modes = ['Client jamming', 'Broadcast jamming']
+twin_modes = ['Silent', 'Jamming']
 
 wifi_networks = []
 interface = None
@@ -327,7 +328,16 @@ def choose_attack(target_ap):
      idx = 1
      # Show attack modes
      for attack in attack_list:
-          print(f"{idx}. {attack}")
+          if attack == 'Handshake Crack':
+               print(f"{BLUE}{idx}. {attack}{RESET} - 4-Way handshake capture and password brute-force")
+          elif attack == 'PMKID Attack':
+               print(f"{BLUE}{idx}. {attack}{RESET} - PMKID capture and password brute-force (client-less)")
+          elif attack == 'Jamming':
+               print(f"{BLUE}{idx}. {attack}{RESET} - Deauth packet AP flooding")
+          elif attack == 'Evil Twin':
+               print(f"{BLUE}{idx}. {attack}{RESET} - MITM attack, replicating AP with fake one")
+          else:
+               print(f"{BLUE}{idx}. {attack}{RESET}")
           idx += 1
      try:
           while True:     
@@ -355,7 +365,14 @@ def choose_deauth_mode():
      idx = 1
      # Show attack modes
      for deauth_mode in deauth_modes:
-          print(f"{idx}. {deauth_mode}")
+          if deauth_mode == 'Client deauth':
+               print(f"{BLUE}{idx}. {deauth_mode}{RESET} - Force reconnection of specific client MAC address from the Wifi network")
+          elif deauth_mode == 'Broadcast':
+               print(f"{BLUE}{idx}. {deauth_mode}{RESET} - Force reconnection of all target Wifi network's clients")
+          elif deauth_mode == 'Silent':
+               print(f"{BLUE}{idx}. {deauth_mode}{RESET} - Wait for device connection to target Wifi network")
+          else:
+               print(f"{BLUE}{idx}. {deauth_mode}{RESET}")
           idx += 1
      try:
           while True:     
@@ -383,7 +400,12 @@ def choose_jammer_mode():
      idx = 1
      # Show attack modes
      for jammer_mode in jammer_modes:
-          print(f"{idx}. {jammer_mode}")
+          if jammer_mode == 'Client jamming':
+               print(f"{BLUE}{idx}. {jammer_mode}{RESET} - Jam specific client MAC address only")
+          elif jammer_mode == 'Broadcast jamming':
+               print(f"{BLUE}{idx}. {jammer_mode}{RESET} - Jam entire Wifi network")
+          else:
+               print(f"{BLUE}{idx}. {jammer_mode}{RESET}")
           idx += 1
      try:
           while True:     
@@ -411,7 +433,12 @@ def choose_twin_mode():
      idx = 1
      # Show attack modes
      for twin_mode in twin_modes:
-          print(f"{idx}. {twin_mode}")
+          if twin_mode == 'Silent':
+               print(f"{BLUE}{idx}. {twin_mode}{RESET} - Evil Twin AP with no jamming")
+          elif twin_mode == 'Jamming':
+               print(f"{BLUE}{idx}. {twin_mode}{RESET} - Evil Twin AP with jamming of the target AP")
+          else:
+               print(f"{BLUE}{idx}. {twin_mode}{RESET}")
           idx += 1
      try:
           while True:     
@@ -1103,11 +1130,13 @@ def jam_network(target_ap, interface, jammer_mode):
 
 # | Evil Twin | #
 
-def evil_twin(target_ap, interface, target):
+def evil_twin(target_ap, twin_mode):
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
      channel = target_ap['Channel'] if target_ap['Channel'] else None
      band = target_ap['Band'] if target_ap['Band'] else None
+     print(twin_mode)
+     time.sleep(5)
 
      def choose_evil_interfaces(detected_interfaces):
           print(f"Select Interfaces:\n")
@@ -1192,6 +1221,8 @@ def evil_twin(target_ap, interface, target):
           if evil_interface and internet_interface:
                logo()
                print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
+
+               print(f'Replicating on {ssid}...')
 
                # Function for running commands
                def run_command(command):
@@ -1459,18 +1490,20 @@ else:
                          pass
 
           elif attack == 'Evil Twin':
-               try:
-                    signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
-                    monitor_switch('verbose', 'stop', interface, None)
-                    start_services(None)
-                    time.sleep(2)
-                    signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
-               except:
-                    pass
-               try:
-                    evil_twin(target_ap, interface, target)
-               except KeyboardInterrupt:
-                    pass
+               twin_mode = choose_twin_mode()
+               if twin_mode:
+                    try:
+                         signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
+                         monitor_switch('verbose', 'stop', interface, None)
+                         start_services(None)
+                         time.sleep(2)
+                         signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
+                    except:
+                         pass
+                    try:
+                         evil_twin(target_ap, twin_mode)
+                    except KeyboardInterrupt:
+                         pass
 
 
      # On tool end turn everything back on
