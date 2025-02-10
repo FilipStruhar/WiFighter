@@ -225,7 +225,7 @@ def monitor_switch(verbose, command, interface, channel):
                          print(f"{CYAN}Setting {interface} to listen on channel {channel}...{RESET}")
                     result = subprocess.run(['iw', 'dev', interface, 'set', 'channel', str(channel)], capture_output=True, text=True)
                     if result.returncode != 0:  # Check if set channel returned error
-                         print(f'{RED}Setting network card to channel "{channel}" returned error -> check prompted channel number!{RESET}')
+                         print(f'{RED} Error setting interface to channel "{channel}". Check prompted channel number!{RESET}')
 
           elif command == "start":
                if verbose:
@@ -1444,16 +1444,16 @@ cmd_lenght = len(sys.argv)
 if cmd_lenght > 1:
      if cmd_lenght == 2:
           command = sys.argv[1].lower()
-          if command == "list":
+          if command == "--list" or command == "-i":
                list_interfaces('verbose')
                print()
-          elif command == "wake":
+          elif command == "--wake" or command == "-w":
                start_services('verbose')
                print()
-          elif command == "kill":
+          elif command == "--kill" or command == "-k":
                stop_services('verbose')
                print()
-          elif command == "--help":
+          elif command == "--help" or command == "-h":
                show_help()
                print()
           else:
@@ -1466,16 +1466,20 @@ if cmd_lenght > 1:
 
           # Handle listen subcommand - set NIC for listenning to specific channel 
           if cmd_lenght > 3:
-               if sys.argv[3].lower() == 'listen' and cmd_lenght == 5:
+               if (sys.argv[3].lower() == '--listen' or sys.argv[3].lower() == '-l') and cmd_lenght == 5:
                     channel = sys.argv[4]
                else:
                     print(f'{RED}Invalid Command! Type "wifighter start (-INTERFACE_NAME-) listen (-CHANNEL_NUMBER-)"\n{RESET}')
                     sys.exit()
 
-          if command == "start" or command == "stop": # Interface mode switch function
+          if (command == "--start" or command == "-u") or (command == "--stop" or command == "-d"): # Interface mode switch function
+               if command == "--start" or command == "-u":
+                    command = 'start'
+               elif command == "--stop" or command == "-d":
+                    command = 'stop'
                monitor_switch('verbose', command, interface, channel)
                print()
-          elif command == "status": # Show interface mode status
+          elif command == "--status" or command == "-s": # Show interface mode status
                mode = interface_mode(interface)
                if mode:
                     print(f'{CYAN}Interface {interface} is {mode}\n{RESET}')
