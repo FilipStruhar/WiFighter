@@ -64,8 +64,6 @@ def introduction():
      print()
      print(f"{BLUE}Welcome :D This is WiFighter!{RESET}")
      print(f"{BLUE}Easy-to-use WiFi pen-testing security tool{RESET}")
-     #print(" ")
-     #print(f"{MAGENTA}Developed by Filip Struhar | https://github.com/FilipStruhar{RESET}")
 
      print()
      print()
@@ -80,6 +78,29 @@ def logo():
 #---------------------------------
 
  # | Global Functions | #
+
+def show_help():
+     help_text = """
+Usage: sudo wifighter [OPTION] [ARGUMENT]
+
+WiFighter Tool for OpenSUSE | developed by Filip Struhar https://github.com/FilipStruhar
+
+Options:
+  wifighter                   Runs the tool.
+
+  -h, --help                  Show this help message and exit.
+  -i, --list                  Show detected wireless interfaces.
+  -s, --status <interface>    Show status (Managed or Monitor) of the specified wireless interface.
+  -u, --start <interface>     Put the wireless interface into monitor mode and stop interfering services.
+     -l <channel>, --listen <channel>  Also set interface to listen on a specified channel.
+  -d, --stop <interface>      Put the wireless interface back into managed mode and restart interfering services.
+  -k, --kill                  Stop interfering services (NetworkManager, wpa_supplicant, avahi-daemon).
+  -w, --wake                  Start interfering services back on (NetworkManager, wpa_supplicant, avahi-daemon).
+
+Note: This tool must be run with sudo!
+"""
+     print(help_text)
+
 
 def create_cap_dir(target, output_dir):
      if target:
@@ -144,7 +165,7 @@ def loading_animation(message):
 
 #---------------------------------
 
- # | INTERRFAC MANAGMENT | #
+ # | INTERFACE MANAGMENT | #
 
 def start_services(verbose):
      global interfering_services
@@ -434,9 +455,9 @@ def choose_twin_mode():
      # Show attack modes
      for twin_mode in twin_modes:
           if twin_mode == 'Silent':
-               print(f"{BLUE}{idx}. {twin_mode}{RESET} - Evil Twin AP with no jamming")
+               print(f"{BLUE}{idx}. {twin_mode}{RESET} - Evil Twin AP with no jamming (1 internet connected interface, 1 wireless interface required)")
           elif twin_mode == 'Jamming':
-               print(f"{BLUE}{idx}. {twin_mode}{RESET} - Evil Twin AP with jamming of the target AP")
+               print(f"{BLUE}{idx}. {twin_mode}{RESET} - Evil Twin AP with jamming of the target AP (1 internet connected interface, 2 wireless interfaces required)")
           else:
                print(f"{BLUE}{idx}. {twin_mode}{RESET}")
           idx += 1
@@ -974,7 +995,8 @@ def pmkid_attack(target_ap, interface, target):
           file_num = output_file.split('-')[1]
      except:
           file_num = None
-     
+     print(output_dir)
+     print(output_file)
      # Wait and verify that handshake was captured successfuly
      captured = False
      print(f"{CYAN}[>]{RESET} Waiting for PMKID...")
@@ -988,6 +1010,7 @@ def pmkid_attack(target_ap, interface, target):
                          command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash', f'{output_dir}/{output_file}']
                     verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     output = str(verify.communicate())
+                    print(output)
                except:
                     pass
                # Extract the caught PMKID's number value
@@ -995,12 +1018,13 @@ def pmkid_attack(target_ap, interface, target):
                pmkid_match = re.search(pmkid_pattern, output) # Search for the pattern in the output string
                if pmkid_match:
                     pmkid = pmkid_match.group(1)
+                    print(pmkid)
                     if int(pmkid) > 0:
                          print(f"{CYAN}[>]{RESET} PMKID captured!")
                          captured = True
                          delete_capture = False
 
-          time.sleep(4)
+          time.sleep(5)
           
      # Kill hcxdumptool process
      capture_pmkid.terminate()
@@ -1200,7 +1224,7 @@ def evil_twin(target_ap, twin_mode):
                return False
 
 
-     
+
      if ssid:
           detected_interfaces = []
 
@@ -1266,7 +1290,7 @@ def evil_twin(target_ap, twin_mode):
                logo()
                print(f"{CYAN}| Evil Twin (MITM/Sniffer) |{RESET}\n")
 
-               print(f'Replicating "{ssid}" on "{evil_interface}"...')
+               print(f'Creating Evil Twin "{ssid}" on "{evil_interface}"...')
 
                # Function for running commands
                def run_command(command):
@@ -1377,6 +1401,8 @@ macaddr_acl=0
                     signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                     jam_network.start() # Start the jammer
                     print(f'{CYAN}[>]{RESET} Jammer on "{ssid}" started')
+               
+               print(f'\n{CYAN}[>]{RESET} Internet for clients via "{evil_interface}" - "{internet_interface}" forward\n')
 
                print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - SSID: "{ssid}"')
                print(f'You can sniff caught clients traffic on "{evil_interface}" using tools like wireshark, tshark or tcpdump!!')
@@ -1426,6 +1452,9 @@ if cmd_lenght > 1:
                print()
           elif command == "kill":
                stop_services('verbose')
+               print()
+          elif command == "--help":
+               show_help()
                print()
           else:
                print(f'{RED}Invalid Command! Type "wifighter [start/stop/status/list/wake/kill] (-INTERFACE_NAME-)"\n{RESET}')
@@ -1527,6 +1556,7 @@ else:
                try:
                     pmkid_attack(target_ap, interface, target)
                except:
+                    """
                     if output_dir and output_file and delete_capture:
                          try:
                               file_num = output_file.split('-')[1]
@@ -1542,6 +1572,7 @@ else:
                                    os.system(f'sudo rm {output_dir}/pmkid_hash') 
                               if os.path.exists(f'{output_dir}/pmkid_cracked.txt'):
                                    os.system(f'sudo rm {output_dir}/pmkid_cracked.txt') 
+                    """
           elif attack == 'Jamming':
                jammer_mode = choose_jammer_mode()
                if jammer_mode:

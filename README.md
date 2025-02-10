@@ -6,8 +6,6 @@ Utilizes aircrack-ng, hcxtools, hashcat and it's own mechanisms for executing co
 
 ## Installation 
 
-**Creating python virtual enviroment**
-
 Clone the project
 ```sh
 git clone https://github.com/FilipStruhar/WiFighter.git
@@ -36,15 +34,16 @@ sudo wifighter
 --------------------------------------------------------------------
 
 ## TO DO & BUGS
-- make sure configurations restore after evil twin
-- deauth original AP in Evil Twin
+- PMKID Attack doesn't work after Evil Twin
+
+!! IMPORTANT !! Attacker needs to choose their currently used "internet_interface" (if multiple the one showed in the OS lower bar) or it will cause clients not having internet connection
 
 ## Future visions
-- choose more wordlists for cracking
-- cracking with hashcat GPU
-- Utilize hashcat & xctools - HW acc. cracking & generating wordlists, conversions?
-- device info in reports
-- monitor start listen command error still switches the NIC to monitor
+- Monitor start listen command error still switches the NIC to monitor
+- Choose more wordlists at once for cracking
+- Cracking with hashcat GPU
+- Generating wordlists
+- NIC info in reports
 
 --------------------------------------------------------------------
 
