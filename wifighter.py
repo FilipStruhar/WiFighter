@@ -1,4 +1,4 @@
-#!/home/filip/Coding/WiFighter/venv/bin/python3
+#!
 
 # | IMPORT | #
 
