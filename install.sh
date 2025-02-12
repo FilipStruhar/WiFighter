@@ -20,7 +20,7 @@ to_install=()
 # Check each package and determine if it is already installed
 for package in "${dependencies[@]}"; do
     echo "[>] Looking for \"$package\" package"
-    if ! zypper search --installed-only "$package" &>/dev/null; then
+    if ! sudo zypper search --installed-only "$package" &>/dev/null; then
         to_install+=("$package")
     fi
 done
@@ -38,8 +38,8 @@ if [ ${#to_install[@]} -gt 0 ]; then
         echo -e "\n| PACKAGE DEPENDENCY INSTALL |"
         # Loop through and install missing packages
         for package in "${to_install[@]}"; do
-            zypper install -y "$package" &>/dev/null
-            if zypper search --installed-only "$package" &>/dev/null; then
+            sudo zypper install -y "$package" &>/dev/null
+            if sudo zypper search --installed-only "$package" &>/dev/null; then
                 echo "[>] Package \"$package\" installed successfully"
             else
                 echo "ERROR Installing package \"$package\" failed!"
@@ -65,10 +65,10 @@ to_install=()
 # Prepare an array to store hcxtools that need to be installed
 for tool in "${github_dependencies[@]}"; do
     echo "[>] Looking for \"$tool\" tool"
-    if ! "$tool" --version &>/dev/null; then
+    if ! sudo "$tool" --version &>/dev/null; then
             to_install+=("$tool")
     elif [ "$tool" == 'hcxdumptool' ]; then
-        installed_version=$(hcxdumptool --version | awk '{print $2}')
+        installed_version=$(sudo hcxdumptool --version | awk '{print $2}')
         if [[ ! "$installed_version" == "6.2.6" ]]; then
             echo "[>] Tool \"hcxdumptool\" needs version 6.2.6. - will be treated as not installed!"
             to_install+=("$tool")
@@ -90,7 +90,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
         echo -e "\n| HCXTOOLS DEPENDENCY INSTALL |"
         # Install hcxtools dependencies
         echo "Installing dependencies..."
-        if zypper in -y gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config &>/dev/null; then
+        if sudo zypper in -y gcc libopenssl3 libopenssl-devel libz1 zlib-ng-compat-devel libcurl4 libcurl-devel libpcap1 libpcap-devel pkgconf-pkg-config &>/dev/null; then
             echo "[>] Dependencies installed successfully"
         else
             echo "ERROR Installing dependencies!"
@@ -103,31 +103,31 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 git clone https://github.com/ZerBea/hcxtools.git &>/dev/null
                 cd hcxtools
                 # Compile the tool
-                make -j $(nproc) &>/dev/null
-                make install &>/dev/null
-                if hcxpcapngtool --version &>/dev/null; then
+                sudo make -j $(nproc) &>/dev/null
+                sudo make install &>/dev/null
+                if sudo hcxpcapngtool --version &>/dev/null; then
                     echo "[>] Package \"hcxpcapngtool\" installed successfully"
                 else
                     echo "ERROR Installing package \"hcxpcapngtool\" failed!"
                     exit 1
                 fi
                 cd ..
-                rm -r hcxtools
+                sudo rm -r hcxtools
             elif [[ "$package" == 'hcxdumptool' ]]; then
             echo "Installing tool \"hcxdumptool\"..."
                 git clone --branch 6.2.6 --depth 1 https://github.com/ZerBea/hcxdumptool.git &>/dev/null
                 cd hcxdumptool
                 # Compile the tool
-                make -j $(nproc) &>/dev/null
-                make install &>/dev/null
-                if hcxdumptool --version &>/dev/null; then
+                sudo make -j $(nproc) &>/dev/null
+                sudo make install &>/dev/null
+                if sudo hcxdumptool --version &>/dev/null; then
                     echo "[>] Package \"hcxdumptool\" installed successfully"
                 else
                     echo "ERROR Installing package \"hcxdumptool\" failed!"
                     exit 1
                 fi
                 cd ..
-                rm -r hcxdumptool
+                sudo rm -r hcxdumptool
             fi
         done
     else
@@ -146,7 +146,7 @@ echo -e "\n\n| PYTHON3 & VENV SETUP |"
 
  # Create python virtual enviroment
 if [ ! -d "$THIS_FILE_DIR/venv" ]; then
-    if python3 -m venv "$THIS_FILE_DIR/venv" &>/dev/null; then
+    if sudo python3 -m venv "$THIS_FILE_DIR/venv" &>/dev/null; then
         echo "[>] Created python virtual enviroment called \"venv\""
     else
         echo "ERROR Creating virtual enviroment!"
@@ -174,7 +174,7 @@ echo -e "\n\n| WIFIGHTER COMMAND INSTALLATION |"
 # Make Python tool script executable
 if [ -f "$THIS_FILE_DIR/wifighter.py" ]; then
     if [ ! -x "$THIS_FILE_DIR/wifighter.py" ]; then
-        if chmod +x "$THIS_FILE_DIR/wifighter.py" &>/dev/null; then
+        if sudo chmod +x "$THIS_FILE_DIR/wifighter.py" &>/dev/null; then
             echo "[>] Put execute permissions on wifighter.py"
         else
             echo "ERROR Making wifighter.py executable!"
@@ -201,7 +201,7 @@ fi
 
 # Make link to /usr/sbin
 if [ -d "/usr/sbin" ] && [ ! -f "/usr/sbin/wifighter" ]; then
-    if ln -s ${THIS_FILE_DIR}/wifighter.py /usr/sbin/wifighter &>/dev/null; then
+    if sudo ln -s ${THIS_FILE_DIR}/wifighter.py /usr/sbin/wifighter &>/dev/null; then
         echo "[>] Created symlink in /usr/sbin"
     else
         echo "ERROR Creating symlink in /usr/sbin"
