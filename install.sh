@@ -211,7 +211,7 @@ fi
 
 # Verify installation
 if [ -x "/usr/sbin/wifighter" ]; then
-    echo -e "\nInstallation complete. You can verify it by executing 'wifighter -h'"
+    echo -e "\nInstallation complete. You can verify it by executing 'sudo wifighter -h'"
     exit 0
 else
     echo -e "\nERROR Installation failed!"
