@@ -38,7 +38,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
         echo -e "\n| PACKAGE DEPENDENCY INSTALL |"
         # Loop through and install missing packages
         for package in "${to_install[@]}"; do
-         zypper install -y "$package" &>/dev/null
+            zypper install -y "$package" &>/dev/null
             if zypper search --installed-only "$package" &>/dev/null; then
                 echo "[>] Package \"$package\" installed successfully"
             else
@@ -68,7 +68,7 @@ for tool in "${github_dependencies[@]}"; do
     if ! "$tool" --version &>/dev/null; then
             to_install+=("$tool")
     elif [ "$tool" == 'hcxdumptool' ]; then
-        installed_version=$ hcxdumptool --version | awk '{print $2}')
+        installed_version=$(hcxdumptool --version | awk '{print $2}')
         if [[ ! "$installed_version" == "6.2.6" ]]; then
             echo "[>] Tool \"hcxdumptool\" needs version 6.2.6. - will be treated as not installed!"
             to_install+=("$tool")
@@ -100,11 +100,14 @@ if [ ${#to_install[@]} -gt 0 ]; then
         for package in "${to_install[@]}"; do    
             if [[ "$package" == 'hcxpcapngtool' ]]; then
                 echo "Installing tool \"hcxpcapngtool\"..."
+                if [ -d "$THIS_FILE_DIR/hcxtools"]; then
+                    rm -r hcxtools
+                fi
                 git clone https://github.com/ZerBea/hcxtools.git &>/dev/null
                 cd hcxtools
                 # Compile the tool
-             make -j $(nproc) &>/dev/null
-             make install &>/dev/null
+                make -j $(nproc) &>/dev/null
+                make install &>/dev/null
                 if hcxpcapngtool --version &>/dev/null; then
                     echo "[>] Package \"hcxpcapngtool\" installed successfully"
                 else
@@ -112,14 +115,17 @@ if [ ${#to_install[@]} -gt 0 ]; then
                     exit 1
                 fi
                 cd ..
-             rm -r hcxtools
+                rm -r hcxtools
             elif [[ "$package" == 'hcxdumptool' ]]; then
-            echo "Installing tool \"hcxdumptool\"..."
+                echo "Installing tool \"hcxdumptool\"..."
+                if [ -d "$THIS_FILE_DIR/hcxdumptool"]; then
+                    rm -r hcxdumptool
+                fi
                 git clone --branch 6.2.6 --depth 1 https://github.com/ZerBea/hcxdumptool.git &>/dev/null
                 cd hcxdumptool
                 # Compile the tool
-             make -j $(nproc) &>/dev/null
-             make install &>/dev/null
+                make -j $(nproc) &>/dev/null
+                make install &>/dev/null
                 if hcxdumptool --version &>/dev/null; then
                     echo "[>] Package \"hcxdumptool\" installed successfully"
                 else
@@ -127,7 +133,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                     exit 1
                 fi
                 cd ..
-             rm -r hcxdumptool
+                rm -r hcxdumptool
             fi
         done
     else
