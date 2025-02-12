@@ -7,7 +7,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 #---------------------------------------------------------------------------------
-# git python3 awk sed
+
 dependencies=('make' 'awk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python3' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcp-server' 'iptables')
 
 THIS_FILE_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
