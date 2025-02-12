@@ -100,7 +100,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
         for package in "${to_install[@]}"; do    
             if [[ "$package" == 'hcxpcapngtool' ]]; then
                 echo "Installing tool \"hcxpcapngtool\"..."
-                if [ -d "$THIS_FILE_DIR/hcxtools"]; then
+                if [ -d "$THIS_FILE_DIR/hcxtools" ]; then
                     rm -r hcxtools
                 fi
                 git clone https://github.com/ZerBea/hcxtools.git &>/dev/null
@@ -118,7 +118,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 rm -r hcxtools
             elif [[ "$package" == 'hcxdumptool' ]]; then
                 echo "Installing tool \"hcxdumptool\"..."
-                if [ -d "$THIS_FILE_DIR/hcxdumptool"]; then
+                if [ -d "$THIS_FILE_DIR/hcxdumptool" ]; then
                     rm -r hcxdumptool
                 fi
                 git clone --branch 6.2.6 --depth 1 https://github.com/ZerBea/hcxdumptool.git &>/dev/null
