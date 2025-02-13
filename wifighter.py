@@ -1482,7 +1482,7 @@ if cmd_lenght > 1:
                show_help()
                print()
           else:
-               print(f'{RED}Invalid Command! Type "wifighter [start/stop/status/list/wake/kill] (-INTERFACE_NAME-)"\n{RESET}')
+               print(f'{RED}Invalid Command! Run WiFighter again...\n{RESET}')
           
      elif cmd_lenght >= 3:
           command = sys.argv[1].lower()
@@ -1494,7 +1494,7 @@ if cmd_lenght > 1:
                if (sys.argv[3].lower() == '--listen' or sys.argv[3].lower() == '-l') and cmd_lenght == 5:
                     channel = sys.argv[4]
                else:
-                    print(f'{RED}Invalid Command! Type "wifighter start (-INTERFACE_NAME-) listen (-CHANNEL_NUMBER-)"\n{RESET}')
+                    print(f'{RED}Invalid Command! Run WiFighter again...\n{RESET}')
                     sys.exit()
 
           if (command == "--start" or command == "-u") or (command == "--stop" or command == "-d"): # Interface mode switch function
@@ -1509,11 +1509,11 @@ if cmd_lenght > 1:
                if mode:
                     print(f'{CYAN}Interface {interface} is {mode}\n{RESET}')
                else:
-                    print(f'{RED}Interface "{interface}" does not exist! Type "wifighter [start/stop/status] (-INTERFACE_NAME-)"\n{RESET}')
+                    print(f'{RED}Interface "{interface}" does not exist!{RESET}')
           else:
-               print(f'{RED}Invalid Command! Type "wifighter [start/stop/status] (-INTERFACE_NAME-)"\n{RESET}')
+               print(f'{RED}Invalid Command! Run WiFighter again...\n{RESET}')
      else:
-          print(f'{RED}Invalid Command! Type "wifighter [start/stop/status] (-INTERFACE_NAME-)"\n{RESET}')
+          print(f'{RED}Invalid Command! Run WiFighter again...\n{RESET}')
 else:
      # | WIFIGHTER TOOL |
 
