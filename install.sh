@@ -20,7 +20,7 @@ to_install=()
 # Check each package and determine if it is already installed
 for package in "${dependencies[@]}"; do
     echo "[>] Looking for \"$package\" package"
-    if ! zypper search --installed-only "$package" &>/dev/null; then
+    if ! zypper search --installed-only --match-exact "$package" &>/dev/null; then
         to_install+=("$package")
     fi
 done
@@ -39,7 +39,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
         # Loop through and install missing packages
         for package in "${to_install[@]}"; do
             zypper install -y "$package" &>/dev/null
-            if zypper search --installed-only "$package" &>/dev/null; then
+            if zypper search --installed-only --match-exact "$package" &>/dev/null; then
                 echo "[>] Package \"$package\" installed successfully"
             else
                 echo "ERROR Installing package \"$package\" failed!"
