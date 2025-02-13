@@ -8,7 +8,7 @@ fi
 
 #---------------------------------------------------------------------------------
 
-dependencies=('make' 'awk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python3' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcp-server' 'iptables')
+dependencies=('make' 'gawk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python311' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcp-server' 'iptables')
 
 THIS_FILE_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
