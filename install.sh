@@ -105,8 +105,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 fi
                 git clone https://github.com/ZerBea/hcxtools.git &>/dev/null
                 cd hcxtools
-                # Compile the tool
-                make -j $(nproc) &>/dev/null
+                # Install the tool
                 make install &>/dev/null
                 if hcxpcapngtool --version &>/dev/null; then
                     echo "[>] Package \"hcxpcapngtool\" installed successfully"
@@ -123,8 +122,7 @@ if [ ${#to_install[@]} -gt 0 ]; then
                 fi
                 git clone --branch 6.2.6 --depth 1 https://github.com/ZerBea/hcxdumptool.git &>/dev/null
                 cd hcxdumptool
-                # Compile the tool
-                make -j $(nproc) &>/dev/null
+                # Install the tool
                 make install &>/dev/null
                 if hcxdumptool --version &>/dev/null; then
                     echo "[>] Package \"hcxdumptool\" installed successfully"

@@ -33,6 +33,10 @@ sudo wifighter
 
 --------------------------------------------------------------------
 
+- Make sure evil twin password is 8+ characters
+- Subprocess excepts
+
+
 ## !! IMPORTANT !! - Read before use
 - **Evil Twin Attack - disconnect all other internet connections on other interfaces than theone selected as "Internet interface"**
 - **Evil Twin Attack - hcxdumptool stops capturing PMKIDs on interface chosen as "Evil Twin interface" after the attack ends... many times reseting NIC drivers with modprobe, replugging NIC or rebooting helped. It's somehow caused by the hostapd...**
