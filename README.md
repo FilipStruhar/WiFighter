@@ -33,7 +33,6 @@ sudo wifighter
 
 --------------------------------------------------------------------
 
-- Make sure evil twin password is 8+ characters
 - Subprocess excepts
 
 
