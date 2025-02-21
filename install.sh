@@ -8,7 +8,7 @@ fi
 
 #---------------------------------------------------------------------------------
 
-dependencies=('make' 'gawk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python311' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcp-server' 'iptables')
+dependencies=('make' 'coreutils' 'gawk' 'sed' 'iputils' 'iproute2' 'iw' 'git' 'python311' 'aircrack-ng' 'hashcat' 'pocl' 'hostapd' 'dhcp-server' 'iptables')
 
 THIS_FILE_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
@@ -215,7 +215,7 @@ fi
 
 # Verify installation
 if [ -x "/usr/sbin/wifighter" ]; then
-    echo -e "\nInstallation complete. You can verify it by executing  wifighter -h'"
+    echo -e '\nInstallation complete. You can verify it by executing "sudo wifighter -h"'
     exit 0
 else
     echo -e "\nERROR Installation failed!"

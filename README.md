@@ -1,6 +1,6 @@
 # WiFighter
-Easy-to-use python WiFi pen-testing tool for OpenSUSE Tumbleweed.
-Utilizes aircrack-ng, hcxtools, hashcat and it's own mechanisms for executing common attacks. 
+Easy-to-use python WiFi pen-testing tool for OpenSUSE.
+Utilizes aircrack-ng, hcxtools, hashcat and it's own mechanisms for wifi network scanning and executing common wifi attacks.
 
 --------------------------------------------------------------------
 
@@ -33,12 +33,9 @@ sudo wifighter
 
 --------------------------------------------------------------------
 
-- Subprocess excepts
-
-
 ## !! IMPORTANT !! - Read before use
-- **Evil Twin Attack - disconnect all other internet connections on other interfaces than theone selected as "Internet interface"**
-- **Evil Twin Attack - hcxdumptool stops capturing PMKIDs on interface chosen as "Evil Twin interface" after the attack ends... many times reseting NIC drivers with modprobe, replugging NIC or rebooting helped. It's somehow caused by the hostapd...**
+- **Evil Twin Attack - disconnect all other internet connected interfaces than the one selected as "Internet interface"**
+- **Evil Twin Attack - hcxdumptool stops capturing PMKIDs on interface chosen as "Evil Twin interface" after the Evil Twin attack ends... sometimes reseting NIC drivers with modprobe, replugging NIC or rebooting helped. It's somehow caused by the hostapd...**
 
 ## Future visions
 - Choose more wordlists at once for cracking
