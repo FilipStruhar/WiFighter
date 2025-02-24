@@ -234,7 +234,7 @@ def monitor_switch(verbose, command, interface, channel):
                     except subprocess.CalledProcessError as e:
                          print(f"{RED}Error running iw dev ... set channel: {e}{RESET}")
 
-          elif command == "start":
+          elif command == "start" and mode == "Managed":
                if verbose:
                     print(f'{CYAN}Interface {interface} is already in Monitor Mode, skipping...{RESET}')
           
@@ -250,7 +250,7 @@ def monitor_switch(verbose, command, interface, channel):
                # Start needed services
                start_services(verbose)
 
-          elif command == "stop":
+          elif command == "stop" and mode == "Managed":
                if verbose:
                     print(f'{CYAN}Interface {interface} is already in Managed Mode, skipping...{RESET}')              
      elif verbose:
