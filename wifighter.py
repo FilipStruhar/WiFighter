@@ -1,4 +1,4 @@
-#!
+#
 
 # | IMPORT | #
 
@@ -254,7 +254,7 @@ def monitor_switch(verbose, command, interface, channel):
                if verbose:
                     print(f'{CYAN}Interface {interface} is already in Managed Mode, skipping...{RESET}')              
      elif verbose:
-          print(f'{RED}Interface "{interface}" does not exist! Retype "wifighter [start/stop/status] [-INTERFACE_NAME-]"{RESET}')
+          print(f'{RED}Interface mode for "{interface}" is not known! Check prompted interface name and try again...{RESET}')
 
 
 def list_interfaces(verbose):
