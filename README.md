@@ -31,16 +31,21 @@ Run the tool
 sudo wifighter
 ```
 
+Show help
+```sh
+sudo wifighter -h
+```
+
 --------------------------------------------------------------------
 
 ## !! IMPORTANT !! - Read before use
 - **Evil Twin Attack - disconnect all other internet connected interfaces than the one selected as "Internet interface"**
-- **Evil Twin Attack - hcxdumptool stops capturing PMKIDs on interface chosen as "Evil Twin interface" after the Evil Twin attack ends... sometimes reseting NIC drivers with modprobe, replugging NIC or rebooting helped. It's somehow caused by the hostapd...**
 
 ## Future visions
 - Choose more wordlists at once for cracking
 - Cracking with hashcat GPU
 - Generating wordlists
-- NIC, device info in reports
+- More info in reports
+- More linux platforms supported
 
 --------------------------------------------------------------------
