@@ -1,5 +1,4 @@
 #!
-
 # | IMPORT | #
 
 import os, sys, subprocess, time, re, multiprocessing, psutil, textwrap, signal
@@ -883,7 +882,7 @@ def handshake_crack(target_ap, interface, deauth_mode, target):
      # Listen for handshake
      capture_handshake.start() # Start airodump-ng process
      delete_capture = True
-     time.sleep(5) # Wait for the airodump to fully start
+     time.sleep(8) # Give some time to airodump to fully start
 
      # Deauth client/s if selected
      if deauth_mode != 'silent':
